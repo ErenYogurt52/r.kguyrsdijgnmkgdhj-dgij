@@ -77,6 +77,7 @@ export function settings(env = process.env) {
       results: int(env.RESULTS_LIMIT, 10, 1, 30),
       maxKeywords: int(env.MAX_KEYWORDS, 3, 1, 5),
       maxCalls: int(env.MAX_API_CALLS_PER_SEARCH, 4, 1, 12),
+      timeBudgetMs: int(env.SEARCH_TIME_BUDGET_MS, 45000, 5000, 300000),
       perUserPerDay: int(env.SEARCHES_PER_USER_PER_DAY, 20, 1, 1000),
       cacheHours: int(env.CACHE_TTL_HOURS, 12, 0, 168),
       cacheDir: env.CACHE_DIR || resolve(process.cwd(), '.cache'),

@@ -23,10 +23,24 @@ export async function searchJobs({ keywords, profile, fresh = false }) {
   } catch {
     throw new ApiError('Can’t reach the Intern Match server. Check that it is running and try again.', 'network', 0);
   }
-  const body = await res.json().catch(() => ({}));
-  // On Netlify the search is streamed, so errors can arrive with status 200.
-  if (!res.ok || body.error) throw new ApiError(body.error?.message || `Search failed (HTTP ${res.status}).`, body.error?.code || 'error', res.status);
-  return body;
+  // On Netlify the answer is streamed as JSON lines (the list so far after each round, then the
+  // final list). If it gets cut off, use the last complete list; errors can arrive with status 200.
+  let text = '';
+  try {
+    const reader = res.body.getReader(), decoder = new TextDecoder();
+    for (;;) { const { value, done } = await reader.read(); if (done) break; text += decoder.decode(value, { stream: true }); }
+  } catch { /* connection closed early: keep what arrived */ }
+  let result = null, error = null;
+  for (const line of text.split('\n')) {
+    if (!line.trim()) continue;
+    let msg;
+    try { msg = JSON.parse(line); } catch { continue; }
+    if (msg && msg.error) error = msg.error;
+    else if (msg && Array.isArray(msg.jobs)) result = msg;
+  }
+  if (!res.ok || (error && !result)) throw new ApiError(error?.message || `Search failed (HTTP ${res.status}).`, error?.code || 'error', res.status);
+  if (!result) return { jobs: [], meta: { keywords, jobType: profile.jobType || 'any', stats: { seen: 0, removed: {} }, cutOff: true } };
+  return result;
 }
 
 // Career coach: streams newline-delimited JSON from /api/coach and calls onText for each piece.

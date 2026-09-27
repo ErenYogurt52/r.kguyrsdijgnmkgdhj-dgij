@@ -140,3 +140,5 @@ ol.card-grid{list-style:none}
 .jt-opt:hover{border-color:var(--accent);color:var(--accent)}
 .jt-opt[aria-pressed="true"]{background:var(--chip-on);border-color:var(--chip-on);color:var(--chip-on-ink)}
 @media (max-width:640px){.jt-label{flex-basis:100%;margin:0}.jt-opt{flex:1;padding:0 10px}}
+.shortfall{margin:0 0 20px;padding:14px 16px;border-left:3px solid var(--accent);background:var(--surface);font-size:15px;color:var(--text-2);max-width:880px}
+.shortfall .link-btn{margin-left:6px}

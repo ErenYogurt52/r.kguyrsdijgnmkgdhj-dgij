@@ -63,9 +63,9 @@ export function createApi(cfg, deps = {}) {
     if (!cfg.searchapi.apiKey) return fail(503, 'search_not_configured', 'Search is not set up yet. Please try again later.');
     if (limiter.remaining(user.uid) <= 0) return fail(429, 'daily_limit', `You’ve used today’s ${cfg.search.perUserPerDay} searches. Try again tomorrow.`);
 
-    const work = async () => {
+    const work = async (onProgress) => {
       try {
-        const out = await runSearch({ keywords, profile: pickProfile(body.profile), serp, limit: cfg.search.results, maxCalls: cfg.search.maxCalls, fresh: body.fresh === true });
+        const out = await runSearch({ keywords, profile: pickProfile(body.profile), serp, limit: cfg.search.results, maxCalls: cfg.search.maxCalls, timeBudgetMs: cfg.search.timeBudgetMs, fresh: body.fresh === true, onProgress });
         if (out.meta.stats.calls > 0) limiter.take(user.uid);
         out.meta.searchedAt = new Date().toISOString();
         out.meta.remainingToday = limiter.remaining(user.uid);
@@ -79,20 +79,22 @@ export function createApi(cfg, deps = {}) {
       }
     };
     if (!streamSearch) { const r = await work(); return json(r.status, r.body); }
-    // Streamed: send spaces while waiting (JSON allows leading whitespace), then the result.
-    // Errors arrive as {"error":…} with status 200, which the browser also checks for.
-    let timer;
+    // Streamed: one JSON line with the list so far after every round, then the final result.
+    // If the platform cuts the answer off, the browser uses the last complete line.
+    // Blank lines keep the connection alive. Errors arrive as {"error":…} with status 200.
+    let timer, open = true;
     const stream = new ReadableStream({
       async start(controller) {
-        timer = setInterval(() => controller.enqueue(enc.encode(' ')), 5000);
-        const r = await work();
+        const send = (text) => { if (open) try { controller.enqueue(enc.encode(text)); } catch { open = false; } };
+        timer = setInterval(() => send('\n'), 5000);
+        const r = await work((snap) => send(`${JSON.stringify(snap)}\n`));
         clearInterval(timer);
-        controller.enqueue(enc.encode(JSON.stringify(r.body)));
-        controller.close();
+        send(`${JSON.stringify(r.body)}\n`);
+        if (open) controller.close();
       },
-      cancel() { clearInterval(timer); },
+      cancel() { open = false; clearInterval(timer); },
     });
-    return new Response(stream, { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+    return new Response(stream, { status: 200, headers: { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store' } });
   }
 
   // Streams newline-delimited JSON: {"t":"text"} … then {"done":true} or {"error":{…}}.

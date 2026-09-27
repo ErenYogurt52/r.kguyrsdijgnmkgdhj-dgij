@@ -27,7 +27,11 @@ test('netlify function: config, streamed search, and OpenRouter coach', async ()
   assert.equal(cfg.coachProvider, undefined, 'the AI provider is not shown to students');
   const r = await fn.default(new Request('https://im.netlify.app/api/search', { method: 'POST', body: JSON.stringify({ keywords: ['Marketing'] }) }));
   assert.equal(r.status, 200);
-  const out = JSON.parse(await r.text());
+  const lines = (await r.text()).split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
+  assert.ok(lines.length >= 2, 'a line per round, then the final result');
+  const out = lines.at(-1);
   assert.equal(out.jobs.length, 7);
+  assert.ok(out.meta.searchedAt, 'the last line is the final result');
+  assert.ok(lines.slice(0, -1).every((l) => Array.isArray(l.jobs)), 'every earlier line is a usable list');
   process.env.SEARCHAPI_KEY = 'bad';
 });

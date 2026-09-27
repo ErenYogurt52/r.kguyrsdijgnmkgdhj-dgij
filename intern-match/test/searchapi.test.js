@@ -33,3 +33,11 @@ test('other SearchApi errors still fail', async () => {
   const { api } = client(() => reply({ error: 'Invalid API key.' }, 401));
   await assert.rejects(api.jobs({ q: 'x intern' }), SearchApiError);
 });
+
+test('no second request when the caller has no budget for it', async () => {
+  const { api, seen } = client(() => reply({ error: "Google Jobs didn't return any results." }));
+  const r = await api.jobs({ q: 'marketing intern part time', retry: false });
+  assert.equal(seen.length, 1);
+  assert.equal(r.calls, 1);
+  assert.deepEqual(r.data.jobs_results, []);
+});

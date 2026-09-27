@@ -87,6 +87,21 @@ export function SearchForm(q, variant, placeholder = 'Search by role or field, e
   </form>`;
 }
 
+// Why the list has fewer than 10 jobs, from what the search removed. Empty when nothing to say.
+function shortfall(n, meta, jt) {
+  const st = meta.stats || {}, rm = st.removed || {};
+  const seen = st.seen || 0;
+  const head = n ? `Only ${n} ${n === 1 ? 'job fits' : 'jobs fit'} right now.` : '';
+  if (!seen) return `${head} No listings came back for these keywords. Try a broader keyword, like a field instead of a job title.`.trim();
+  const parts = [];
+  const exp = (rm.experience || 0) + (rm.senior || 0);
+  if (jt !== 'any' && rm.jobType) parts.push(`${rm.jobType} didn’t say they’re ${typeName(jt).toLowerCase()}`);
+  if (exp) parts.push(`${exp} asked for experience or were senior roles`);
+  if ((rm.location || 0) + (rm.abroad || 0)) parts.push(`${(rm.location || 0) + (rm.abroad || 0)} were outside Ho Chi Minh City`);
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
+  return `${head} We checked ${seen} ${seen === 1 ? 'listing' : 'listings'}${list ? `: ${list}.` : ' for these keywords.'}`.trim();
+}
+
 // Full-time / part-time filter shown under the search bar on the Top 10 page.
 function JobTypeFilter(ctx) {
   const cur = (ctx.profile && ctx.profile.jobType) || 'any';
@@ -340,14 +355,16 @@ export function top(ctx, route, s) {
     body = Empty(e.code === 'daily_limit' ? 'That’s all the searches for today.' : e.code === 'search_not_configured' ? 'Search isn’t set up yet.' : 'We couldn’t finish the search.', e.message, actions, true);
   } else {
     const { jobs, meta } = s.data;
-    const st = meta.stats || {};
+    const limit = ctx.config.results || 10;
+    const why = jobs.length < limit ? shortfall(jobs.length, meta, jt) : '';
+    const anyBtn = jt !== 'any' ? h`<button type="button" class="btn btn-primary" data-action="jobtype" data-value="any" data-fk="jt-any-empty">Show any job type</button>` : '';
     body = jobs.length
-      ? h`${Grid(jobs, ctx, { prefix: 'r', ranked: true })}
-        <div class="results-foot"><p class="fine">${meta.searchedAt ? `Updated ${ago(Date.parse(meta.searchedAt))}. ` : ''}Checked ${plural(st.seen || 0, 'listing')}, kept ${st.kept || 0}${st.kept > jobs.length ? `, showing the best ${jobs.length}` : ''}.${meta.partial ? ' Some searches failed, so this list may be shorter.' : ''}</p>
+      ? h`${why ? h`<p class="shortfall" role="status">${txt(why)}${jt !== 'any' ? h` <button type="button" class="link-btn" data-action="jobtype" data-value="any">Show any job type</button>` : ''}</p>` : ''}
+        ${Grid(jobs, ctx, { prefix: 'r', ranked: true })}
+        <div class="results-foot"><p class="fine">${meta.searchedAt ? `Updated ${ago(Date.parse(meta.searchedAt))}.` : ''}</p>
           <button type="button" class="btn btn-outline btn-sm" data-action="refresh" data-fk="refresh">${icon('refresh')}Search again</button></div>`
-      : jt !== 'any'
-        ? Empty(`No ${typeName(jt).toLowerCase()} jobs right now.`, `We found no ${typeName(jt).toLowerCase()} internships or no-experience jobs in Ho Chi Minh City for ${kws.map((k) => `“${k}”`).join(', ')}. Many listings don’t say whether they are full-time or part-time, so try Any.`, h`<button type="button" class="btn btn-primary" data-action="jobtype" data-value="any">Show any job type</button><a class="btn btn-outline" href="#/profile">Edit keywords</a>`)
-      : Empty('Nothing that fits right now.', `We found no internships or no-experience jobs in Ho Chi Minh City for ${kws.map((k) => `“${k}”`).join(', ')}. Try a broader keyword, like a field instead of a job title.`, h`<a class="btn btn-primary" href="#/profile">Edit keywords</a><button type="button" class="btn btn-outline" data-action="refresh">${icon('refresh')}Search again</button>`);
+      : Empty(jt !== 'any' ? `No ${typeName(jt).toLowerCase()} jobs right now.` : 'Nothing that fits right now.', why,
+        h`${anyBtn}<a class="btn ${anyBtn ? 'btn-outline' : 'btn-primary'}" href="#/profile">Edit keywords</a><button type="button" class="btn btn-outline" data-action="refresh">${icon('refresh')}Search again</button>`);
   }
   return h`${head}<div class="container page-body">${body}</div>`;
 }

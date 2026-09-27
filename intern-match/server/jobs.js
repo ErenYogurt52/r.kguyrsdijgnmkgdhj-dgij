@@ -247,7 +247,11 @@ export function relevance(entry, profile, keywords) {
 }
 
 /* ---------- Orchestration ---------- */
-export async function runSearch({ keywords, profile = {}, serp, limit = 10, maxCalls = 4, fresh = false }) {
+// timeBudgetMs: stop starting new searches after this long (Netlify ends a streamed function at 60 s).
+// onProgress(result) gets the list so far after every round, so a cut-off answer still has jobs in it.
+export async function runSearch({ keywords, profile = {}, serp, limit = 10, maxCalls = 4, fresh = false, timeBudgetMs = 45000, now = Date.now, onProgress = null }) {
+  const deadline = now() + timeBudgetMs;
+  let stoppedEarly = false;
   const stats = { calls: 0, cachedCalls: 0, seen: 0, kept: 0, removed: { experience: 0, senior: 0, abroad: 0, location: 0, jobType: 0, duplicate: 0 } };
   // Job type filter: the searches ask Google for it, and listings that don't say it are left out.
   const jt = profile.jobType === 'fulltime' || profile.jobType === 'parttime' ? profile.jobType : null;
@@ -279,26 +283,35 @@ export async function runSearch({ keywords, profile = {}, serp, limit = 10, maxC
   let round = 0, current = keywords.map((kw) => ({ kw, q: form(kw, 0), page: 1 }));
   const nextForms = [1, 2];
   while (current.length && pool.size < limit) {
-    const batch = current.slice(0, Math.max(0, maxCalls - stats.calls));
+    if (deadline - now() < 5000) { stoppedEarly = true; break; }
+    const room = maxCalls - stats.calls - stats.cachedCalls; // cached requests count too, so a repeat search does the same
+    const batch = current.slice(0, Math.max(0, room));
     if (!batch.length) break;
-    const settled = await Promise.all(batch.map((t) => serp.jobs({ q: t.q, nextPageToken: t.token, fresh }).then((r) => ({ t, r }), (e) => ({ t, e }))));
+    const retry = room >= 2 * batch.length; // only spend extra requests when the budget allows it
+    const settled = await Promise.all(batch.map((t) => serp.jobs({ q: t.q, nextPageToken: t.token, fresh, deadline, retry }).then((r) => ({ t, r }), (e) => ({ t, e }))));
     const nextPages = [];
     settled.forEach(({ t, r, e }, ti) => {
       if (e) { errors.push(e); return; }
-      if (r.cached) stats.cachedCalls++; else stats.calls++;
+      const requests = r.requests ?? 1, real = r.calls ?? (r.cached ? 0 : 1);
+      stats.calls += real; stats.cachedCalls += requests - real;
       queries.push({ q: t.q, page: t.page, results: r.data.jobs_results.length, cached: r.cached });
       r.data.jobs_results.forEach((raw, pos) => consider(raw, { kw: t.kw, order: [round, pos, ti] }));
       if (r.data.next_page_token && t.page < 2) nextPages.push({ ...t, token: r.data.next_page_token, page: t.page + 1 });
     });
     if (!queries.length && errors.length) throw errors[0]; // nothing worked (bad key, no credits…)
     round++;
+    if (onProgress) onProgress(build());
     if (round === 1 && nextPages.length) current = nextPages;
     else { const f = nextForms.shift(); current = f === undefined ? [] : keywords.map((kw) => ({ kw, q: form(kw, f), page: 1 })); }
   }
 
-  const ranked = [...pool.values()].map((entry) => ({ entry, ...relevance(entry, profile, keywords) }))
-    .sort((a, b) => b.score - a.score || a.entry.order[0] - b.entry.order[0] || a.entry.order[1] - b.entry.order[1] || a.entry.order[2] - b.entry.order[2]);
-  const jobs = ranked.slice(0, limit).map(({ entry, reasons }) => ({ ...entry.job, keywords: entry.keywords, reasons }));
-  stats.kept = pool.size;
-  return { jobs, meta: { keywords, jobType: jt || 'any', queries, stats, partial: errors.length > 0, warning: errors.length ? errors[0].message : null } };
+  return build();
+
+  function build() {
+    const ranked = [...pool.values()].map((entry) => ({ entry, ...relevance(entry, profile, keywords) }))
+      .sort((a, b) => b.score - a.score || a.entry.order[0] - b.entry.order[0] || a.entry.order[1] - b.entry.order[1] || a.entry.order[2] - b.entry.order[2]);
+    const jobs = ranked.slice(0, limit).map(({ entry, reasons }) => ({ ...entry.job, keywords: entry.keywords, reasons }));
+    stats.kept = pool.size;
+    return { jobs, meta: { keywords, jobType: jt || 'any', limit, queries: [...queries], stats: structuredClone(stats), stoppedEarly, partial: errors.length > 0, warning: errors.length ? errors[0].message : null } };
+  }
 }

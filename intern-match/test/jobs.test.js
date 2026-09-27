@@ -170,3 +170,19 @@ test('runSearch with a job type asks for it and keeps only listings that say it'
   await runSearch({ keywords: ['Marketing'], profile: { jobType: 'any' }, serp: fakeSerp({}, any), maxCalls: 1 });
   assert.equal(any[0], 'Marketing intern');
 });
+
+test('runSearch stops starting new searches when its time budget runs out', async () => {
+  let t = 0;
+  const log = [];
+  const serp = {
+    async jobs({ q, nextPageToken, deadline }) {
+      log.push({ q: nextPageToken || q, left: deadline - t });
+      t += 20000; // each search takes 20 s
+      return { data: { jobs_results: [], next_page_token: nextPageToken ? null : q === 'Marketing intern' ? 'p2' : null }, cached: false };
+    },
+  };
+  const out = await runSearch({ keywords: ['Marketing'], serp, maxCalls: 10, timeBudgetMs: 45000, now: () => t });
+  assert.deepEqual(log.map((l) => l.q), ['Marketing intern', 'p2', 'thực tập sinh Marketing']);
+  assert.ok(log.every((l) => l.left >= 5000), 'every search had time left when it started');
+  assert.equal(out.meta.stoppedEarly, true);
+});
