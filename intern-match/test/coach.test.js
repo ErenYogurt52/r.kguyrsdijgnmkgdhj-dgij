@@ -173,3 +173,11 @@ test('falls back from a busy Gemini (503) to OpenRouter without the student noti
   assert.equal(r.status, 503);
   assert.match((await r.json()).error.message, /coach is busy/);
 });
+
+test('the coach answers in English unless the student asks for Vietnamese', () => {
+  const p = systemPrompt(cleanContext({ profile: { keywords: ['Marketing'] }, jobs: [{ title: 'Thực tập sinh Marketing' }] }));
+  assert.match(p, /always reply in English/);
+  assert.match(p, /only when the student explicitly asks/);
+  assert.match(p, /Reminder: answer in English/);
+  assert.doesNotMatch(p, /language the student writes in/);
+});
