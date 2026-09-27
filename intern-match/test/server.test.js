@@ -82,15 +82,17 @@ test('daily limit and bad input', async () => {
   assert.equal((await r.json()).error.code, 'daily_limit');
 });
 
-test('missing or wrong SearchApi key gives a clear message', async () => {
+test('missing or wrong SearchApi key gives a plain message without provider details', async () => {
   const none = await listen(makeServer({ SEARCHAPI_KEY: '' }));
   const r1 = await post(none, { keywords: ['Marketing'] });
   assert.equal(r1.status, 503);
-  assert.match((await r1.json()).error.message, /SEARCHAPI_KEY/);
+  assert.match((await r1.json()).error.message, /not set up/);
   const wrong = await listen(makeServer({ SEARCHAPI_KEY: 'nope' }));
   const r2 = await post(wrong, { keywords: ['Marketing'] });
   assert.equal(r2.status, 502);
-  assert.match((await r2.json()).error.message, /Invalid API key/);
+  const m2 = (await r2.json()).error.message;
+  assert.match(m2, /had a problem/);
+  assert.doesNotMatch(m2, /SearchApi|Google/i);
 });
 
 test('an unknown location falls back to the city name in the query', async () => {

@@ -69,7 +69,7 @@ export function systemPrompt({ profile, jobs, focus }) {
     `- Preferred areas: ${areas.join(', ') || 'any'}`,
     `- Working mode: ${profile.modes.map((m) => label(MODES, m)).join(', ') || 'any'}`,
     '',
-    jobs.length ? `The student's current top ${jobs.length} listings (from Google Jobs, Ho Chi Minh City):` : 'The student has no listings loaded yet. Suggest they open their Top 10 first if they ask about specific jobs.',
+    jobs.length ? `The student's current top ${jobs.length} listings (Ho Chi Minh City):` : 'The student has no listings loaded yet. Suggest they open their Top 10 first if they ask about specific jobs.',
     ...jobs.map((j) => `${j.n}. ${j.title} — ${j.company} | ${j.location || 'Ho Chi Minh City'} | ${j.kind}${j.schedule ? ` | ${j.schedule}` : ''}${j.salary ? ` | Pay: ${j.salary}` : ''}${j.posted ? ` | Posted ${j.posted}` : ''}${j.via ? ` | via ${j.via}` : ''}${j.summary ? `\n   Details: ${j.summary}` : ''}`),
   ];
   if (focus) lines.push('', `The student is currently looking at listing ${focus}. Assume questions are about it unless they say otherwise.`);

@@ -167,7 +167,7 @@ export function checkEligibility(job) {
   const internTitle = INTERN.test(title), internSched = /intern|thuc tap/.test(sched);
   if (internTitle || internSched) {
     if (SENIOR_ANY.test(title)) return { ok: false, why: 'senior' };
-    return { ok: true, kind: 'internship', reason: internTitle ? 'The job title says it’s an internship.' : 'Google Jobs lists it as an internship.' };
+    return { ok: true, kind: 'internship', reason: internTitle ? 'The job title says it’s an internship.' : 'The listing is marked as an internship.' };
   }
   if (SENIOR_ANY.test(title) || SENIOR_STAFF.test(title)) return { ok: false, why: 'senior' };
   const zero = ZERO_EXP.some((r) => r.test(title) || r.test(ext) || r.test(body));

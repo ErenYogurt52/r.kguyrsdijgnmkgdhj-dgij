@@ -59,7 +59,7 @@ export function createApi(cfg, deps = {}) {
     try { body = await readJson(request, 32 * 1024); } catch (e) { return fail(e.status || 400, 'bad_request', e.message); }
     const keywords = cleanKeywords(body.keywords, cfg.search.maxKeywords);
     if (!keywords.length) return fail(400, 'no_keywords', 'Add at least one keyword to your profile first.');
-    if (!cfg.searchapi.apiKey) return fail(503, 'search_not_configured', 'Search is not set up yet. Add SEARCHAPI_KEY to the environment variables and restart.');
+    if (!cfg.searchapi.apiKey) return fail(503, 'search_not_configured', 'Search is not set up yet. Please try again later.');
     if (limiter.remaining(user.uid) <= 0) return fail(429, 'daily_limit', `You’ve used today’s ${cfg.search.perUserPerDay} searches. Try again tomorrow.`);
 
     const work = async () => {
@@ -72,7 +72,8 @@ export function createApi(cfg, deps = {}) {
         return { status: 200, body: out };
       } catch (e) {
         console.error('[search] failed:', e.message);
-        if (e instanceof SearchApiError) return { status: e.status === 503 ? 503 : e.status === 429 ? 429 : 502, body: { error: { code: 'search_failed', message: e.message } } };
+        // The real reason stays in the server log; the student sees a plain message.
+        if (e instanceof SearchApiError) return { status: e.status === 503 ? 503 : e.status === 429 ? 429 : 502, body: { error: { code: 'search_failed', message: e.status === 429 ? 'The job search is busy right now. Please try again in a few minutes.' : 'The job search had a problem. Please try again.' } } };
         return { status: 500, body: { error: { code: 'search_failed', message: 'Something went wrong while searching. Try again.' } } };
       }
     };

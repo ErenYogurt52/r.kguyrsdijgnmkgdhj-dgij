@@ -17,7 +17,7 @@ export function ago(ms) {
 }
 export const queryFor = (k) => (VI_RE.test(k) ? `thực tập sinh ${k}` : `${k} intern`);
 const kindLabel = (j) => (j.kind === 'internship' ? 'Internship' : 'No experience needed');
-export const applyTarget = (j) => j.applyOptions[0] || (j.shareLink ? { title: 'Google Jobs', link: j.shareLink } : null);
+export const applyTarget = (j) => j.applyOptions[0] || (j.shareLink ? { title: 'Original listing', link: j.shareLink } : null);
 const locLine = (j) => {
   if (j.remote && !j.area && !j.location) return 'Remote, Vietnam';
   return h`${txt(j.location || 'Ho Chi Minh City')}${j.remote ? ' · Remote possible' : ''}`;
@@ -59,7 +59,7 @@ export function Footer(ctx) {
       <nav aria-label="Footer"><h2 class="footer-h">Explore</h2><ul>${ctx.user
         ? h`<li><a href="#/top">Top 10</a></li><li><a href="#/coach">Career coach</a></li><li><a href="#/saved">Saved</a></li><li><a href="#/profile">Your profile</a></li>`
         : h`<li><a href="#/signup">Sign up</a></li><li><a href="#/login">Log in</a></li>`}<li><a href="#/how-it-works">How it works</a></li></ul></nav>
-      <div><h2 class="footer-h">Listings</h2><p class="footer-note">Found through Google Jobs, using SearchApi. Each listing links to the website that posted it.</p></div>
+      <div><h2 class="footer-h">Listings</h2><p class="footer-note">Each listing links to the website that posted it.</p></div>
       <div><h2 class="footer-h">Your data</h2><p class="footer-note">Your account, profile and saved list are stored in Firebase. Intern Match never asks for your CV.</p></div>
     </div>
     <div class="footer-base"><span>© ${new Date().getFullYear()} Intern Match</span><span>Built for university students in Ho Chi Minh City</span></div>
@@ -81,7 +81,7 @@ export function SaveButton(j, ctx, variant = 'card', prefix = 'c') {
   return h`<button type="button" class="btn btn-save btn-save-${variant}" data-action="save" data-id="${j.id}" aria-pressed="${on ? 'true' : 'false'}" aria-label="${on ? 'Remove from saved' : 'Save'}: ${j.title}, ${j.company}" title="${on ? 'Saved' : 'Save'}" data-fk="save-${variant}-${prefix}-${j.id}">${icon(on ? 'bookmark-fill' : 'bookmark')}${variant === 'card' ? '' : h`<span class="save-text">${on ? 'Saved' : 'Save'}</span>`}</button>`;
 }
 
-const SourceBadge = (j) => h`<p class="src"><span class="src-badge"><span class="src-k">Via</span><span class="src-v">${txt(j.via || 'Google Jobs')}</span></span>${j.applyOptions.length > 1 ? h`<span class="src-more">+${j.applyOptions.length - 1}<span class="sr-only"> more ${j.applyOptions.length === 2 ? 'site' : 'sites'}</span></span>` : ''}</p>`;
+const SourceBadge = (j) => h`<p class="src"><span class="src-badge"><span class="src-k">Via</span><span class="src-v">${txt(j.via || 'Original site')}</span></span>${j.applyOptions.length > 1 ? h`<span class="src-more">+${j.applyOptions.length - 1}<span class="sr-only"> more ${j.applyOptions.length === 2 ? 'site' : 'sites'}</span></span>` : ''}</p>`;
 
 export function JobCard(j, ctx, opts = {}) {
   const p = opts.prefix || 'c', tid = `t-${p}-${j.id}`;
@@ -110,7 +110,7 @@ export const Loading = (text = 'Loading…') => h`<div class="container page-pad
 /* ---------------- Home ---------------- */
 const STEPS = [
   ['Create your profile', 'Your major, skills, and the kinds of roles you want. These become your search keywords.'],
-  ['We search Google Jobs', 'For each keyword we search listings in Ho Chi Minh City, in English and Vietnamese.'],
+  ['We search for you', 'We look for internships and entry-level jobs in Ho Chi Minh City that match your keywords.'],
   ['We keep what fits a student', 'Only internships, or jobs that clearly say no experience is needed. Everything else is removed.'],
   ['You get your top 10', 'Ordered by how well each listing fits your keywords, skills and preferred areas.'],
   ['Apply on the original website', 'Save the ones you like, then finish on the site that posted them. We never collect your CV.'],
@@ -120,15 +120,16 @@ export function home(ctx) {
   const kws = (ctx.profile && ctx.profile.keywords) || [];
   return h`<section class="hero grain" aria-labelledby="hero-title">${raw(HERO_ART)}
     <div class="container hero-inner">
-      <dl class="hero-facts"><div><dt>Listings</dt><dd>Google Jobs</dd></div><div><dt>Location</dt><dd>Ho Chi Minh City</dd></div><div><dt>Apply</dt><dd>On the original website</dd></div></dl>
+      <dl class="hero-facts"><div><dt>Picks</dt><dd>Your top 10</dd></div><div><dt>Location</dt><dd>Ho Chi Minh City</dd></div><div><dt>Apply</dt><dd>On the original website</dd></div></dl>
       <h1 id="hero-title" class="display">Find the right internship for your future.</h1>
-      <p class="hero-sub">Tell us what you study and what you’re looking for. We search Google Jobs and show your 10 best internships and no-experience jobs in Ho Chi Minh City.</p>
+      <p class="hero-sub">Tell us what you study and what you’re looking for. We show your 10 best internships and no-experience jobs in Ho Chi Minh City.</p>
       ${ctx.user
         ? h`${SearchForm('', 'hero')}${kws.length ? h`<div class="quick quick-hero" role="group" aria-label="Your keywords">${kws.map((k) => h`<a class="chip" href="#/top?q=${encodeURIComponent(k)}">${txt(k)}</a>`)}<a class="chip chip-strong" href="#/top">${icon('sparkle', 'chip-ic')}See your top 10</a></div>` : ''}`
         : h`<div class="hero-cta"><a class="btn btn-primary search-btn" href="#/signup">Create a free account ${icon('arrow')}</a><a class="btn btn-ghost-dark search-btn" href="#/login">Log in</a></div>`}
     </div></section>
   <section class="section" aria-labelledby="how-title"><div class="container how-grid">
-    <div class="how-panel grain"><p class="how-big">Everyone starts somewhere<br>Find yours</p><p class="how-cap">Internships in Ho Chi Minh City, picked for your major and skills.</p></div>    <div><p class="eyebrow">How it works</p><h2 id="how-title" class="h-section">How Intern Match works.</h2>
+    <div class="how-panel grain"><p class="how-big">Everyone starts somewhere.<br>Start here.</p><p class="how-cap">Internships and no-experience roles in Ho Chi Minh City, picked for your major and skills.</p></div>
+    <div><p class="eyebrow">How it works</p><h2 id="how-title" class="h-section">How Intern Match works.</h2>
       <ol class="steps">${STEPS.map(([t, d], i) => h`<li><span class="step-n" aria-hidden="true">${pad(i + 1)}</span><h3 class="step-t">${t}</h3><p class="step-d">${d}</p></li>`)}</ol>
       <a class="link-arrow" href="#/how-it-works">What we keep and remove ${icon('arrow')}</a></div>
   </div></section>
@@ -137,7 +138,7 @@ export function home(ctx) {
     ${Tiles(ctx)}
   </div></section>
   <section class="section section-sources" aria-labelledby="rules-title"><div class="container">
-    <div class="section-head"><div><p class="eyebrow eyebrow-light">What makes the list</p><h2 id="rules-title" class="h-section">Four rules, every time.</h2></div><p class="section-sub">Listings come from Google Jobs, which gathers them from company sites and job boards. You always apply on the original site.</p></div>
+    <div class="section-head"><div><p class="eyebrow eyebrow-light">What makes the list</p><h2 id="rules-title" class="h-section">Four rules, every time.</h2></div><p class="section-sub">Listings come from company sites and job boards. You always apply on the original site.</p></div>
     <ul class="sources rules">${[['01', 'Internship', 'Or a job that asks for no experience'], ['02', 'No experience', 'Listings that ask for years of experience are removed'], ['03', 'Ho Chi Minh City', 'Jobs in other cities are removed'], ['04', 'Your top 10', 'Ordered by fit with your profile'], ['05', 'Original website', 'Apply where the job was posted']].map(([c, n, d]) => h`<li class="source"><span class="source-circle" aria-hidden="true">${c}</span><span class="source-name">${n}</span><span class="source-n">${txt(d)}</span></li>`)}</ul>
   </div></section>`;
 }
@@ -148,7 +149,7 @@ function Tiles(ctx) {
 }
 
 export function how() {
-  return h`<div class="page-head container"><p class="eyebrow">How it works</p><h1 class="page-title">How Intern Match works.</h1><p class="lead">We turn your profile into Google Jobs searches, remove anything that isn’t right for a student, and show you the 10 best matches. You always apply on the original website.</p></div>
+  return h`<div class="page-head container"><p class="eyebrow">How it works</p><h1 class="page-title">How Intern Match works.</h1><p class="lead">We turn your profile into searches, remove anything that isn’t right for a student, and show you the 10 best matches. You always apply on the original website.</p></div>
   <div class="container page-body narrow how-page">
     <ol class="steps">${STEPS.map(([t, d], i) => h`<li><span class="step-n" aria-hidden="true">${pad(i + 1)}</span><h2 class="step-t">${t}</h2><p class="step-d">${d}</p></li>`)}</ol>
     <section class="rules-cols" aria-label="Rules"><div><h2 class="h2">What we keep</h2><ul class="ticks">
@@ -255,7 +256,7 @@ export function ProfileForm(d, ctx, mode) {
       <div class="meter meter-4" aria-hidden="true">${parts.map((f) => h`<span${f[1] ? raw(' class="on"') : ''}></span>`)}</div>
       <ul class="factor-list">${parts.map(([n, ok]) => h`<li class="${ok ? 'is-set' : ''}">${icon(ok ? 'check' : 'minus')}<span>${n}</span><span class="sr-only">${ok ? ': set' : ': not set'}</span></li>`)}</ul>
       <div class="pf-preview">${used.length
-        ? h`<p class="hint">We’ll search Google Jobs for:</p><ul class="q-list">${used.map((k) => h`<li>${txt(`“${queryFor(k)}”`)}</li>`)}</ul><p class="hint">Only internships or jobs asking for no experience, in Ho Chi Minh City.</p>`
+        ? h`<p class="hint">We’ll search for:</p><ul class="q-list">${used.map((k) => h`<li>${txt(`“${queryFor(k)}”`)}</li>`)}</ul><p class="hint">Only internships or jobs asking for no experience, in Ho Chi Minh City.</p>`
         : h`<p class="hint">Add at least one keyword to see your top 10.</p>`}</div></aside>
   </div>`;
 }
@@ -303,13 +304,13 @@ export function top(ctx, route, s) {
   const kws = q ? [q] : ctx.profile.keywords.slice(0, ctx.config.maxKeywords || 3);
   const head = h`<div class="page-head container">
     ${q ? h`<p class="eyebrow">Search</p><h1 class="page-title" tabindex="-1">Top ${ctx.config.results || 10} for “${txt(q)}”.</h1>` : h`<p class="eyebrow">Your top ${ctx.config.results || 10}</p><h1 class="page-title" tabindex="-1">Picked for you.</h1>`}
-    <p class="lead">Internships and jobs that need no experience, in Ho Chi Minh City, from Google Jobs.</p>
+    <p class="lead">Internships and jobs that need no experience, in Ho Chi Minh City.</p>
     <div class="rec-summary">${q
       ? h`<a class="link-arrow" href="#/top">${icon('arrow', 'flip')}Back to your top 10</a>`
       : h`<span class="muted">Your keywords:</span>${kws.map((k) => h`<span class="af-locked">${txt(k)}</span>`)}<a class="link-btn" href="#/profile">Edit keywords</a>`}</div>
     ${SearchForm(q || '', 'page', 'Try other keywords')}</div>`;
   let body;
-  if (!s || s.status === 'loading') body = h`<p class="loading-line" role="status">${icon('search')}Searching Google Jobs for ${txt(kws.map((k) => `“${k}”`).join(', '))}…</p>${SkeletonGrid(6)}`;
+  if (!s || s.status === 'loading') body = h`<p class="loading-line" role="status">${icon('search')}Searching for ${txt(kws.map((k) => `“${k}”`).join(', '))}…</p>${SkeletonGrid(6)}`;
   else if (s.status === 'error') {
     const e = s.error;
     const actions = e.code === 'no_keywords' ? h`<a class="btn btn-primary" href="#/profile">Add keywords</a>`
@@ -323,7 +324,7 @@ export function top(ctx, route, s) {
       ? h`${Grid(jobs, ctx, { prefix: 'r', ranked: true })}
         <div class="results-foot"><p class="fine">${meta.searchedAt ? `Updated ${ago(Date.parse(meta.searchedAt))}. ` : ''}Checked ${plural(st.seen || 0, 'listing')}, kept ${st.kept || 0}${st.kept > jobs.length ? `, showing the best ${jobs.length}` : ''}.${meta.partial ? ' Some searches failed, so this list may be shorter.' : ''}</p>
           <button type="button" class="btn btn-outline btn-sm" data-action="refresh" data-fk="refresh">${icon('refresh')}Search again</button></div>`
-      : Empty('Nothing that fits right now.', `Google Jobs had no internships or no-experience jobs in Ho Chi Minh City for ${kws.map((k) => `“${k}”`).join(', ')}. Try a broader keyword, like a field instead of a job title.`, h`<a class="btn btn-primary" href="#/profile">Edit keywords</a><button type="button" class="btn btn-outline" data-action="refresh">${icon('refresh')}Search again</button>`);
+      : Empty('Nothing that fits right now.', `We found no internships or no-experience jobs in Ho Chi Minh City for ${kws.map((k) => `“${k}”`).join(', ')}. Try a broader keyword, like a field instead of a job title.`, h`<a class="btn btn-primary" href="#/profile">Edit keywords</a><button type="button" class="btn btn-outline" data-action="refresh">${icon('refresh')}Search again</button>`);
   }
   return h`${head}<div class="container page-body">${body}</div>`;
 }
@@ -356,8 +357,8 @@ export function detail(ctx, j) {
     <div class="detail-body">
       ${j.highlights.map((hl) => h`<section><h2 class="h2">${txt(hl.title)}</h2><ul class="ticks">${hl.items.map((i) => h`<li>${txt(i)}</li>`)}</ul></section>`)}
       ${paras.length ? h`<section><h2 class="h2">Full description</h2><div class="desc">${paras.map((p) => h`<p>${txt(p)}</p>`)}</div></section>` : ''}
-      <section><h2 class="h2">Source</h2><p>Found on Google Jobs${j.via ? h`, listed via ${txt(j.via)}` : ''}. The original website has the final word on details and deadlines.</p>
-        ${j.shareLink ? h`<p>${ext(j.shareLink, 'link-arrow', 'View on Google Jobs', h`View on Google Jobs ${icon('external')}`)}</p>` : ''}</section>
+      <section><h2 class="h2">Source</h2><p>${j.via ? h`Listed via ${txt(j.via)}. ` : ''}The original website has the final word on details and deadlines.</p>
+        ${j.shareLink ? h`<p>${ext(j.shareLink, 'link-arrow', 'View the original listing', h`View the original listing ${icon('external')}`)}</p>` : ''}</section>
     </div>
   </div>
   ${target ? h`<div class="apply-bar">${ext(target.link, 'btn btn-primary', `Apply on ${target.title}`, h`Apply on ${txt(target.title)} ${icon('external')}`)}${SaveButton(j, ctx, 'bar', 'b')}</div>` : ''}`;
