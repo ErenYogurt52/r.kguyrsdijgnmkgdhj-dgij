@@ -102,7 +102,7 @@ export function createApi(cfg, deps = {}) {
     try { body = await readJson(request, 128 * 1024); } catch (e) { return fail(e.status || 400, 'bad_request', e.message); }
     const messages = cleanChat(body.messages);
     if (!messages.length || messages[messages.length - 1].role !== 'user') return fail(400, 'bad_request', 'Send a message first.');
-    if (!cfg.coach.apiKey) return fail(503, 'coach_not_configured', 'The coach is not set up yet. Add GEMINI_API_KEY to the environment variables and restart.');
+    if (!cfg.coach.apiKey) return fail(503, 'coach_not_configured', 'The coach isn’t available yet. Please check back later.');
     if (coachLimiter.remaining(user.uid) <= 0) return fail(429, 'daily_limit', `You’ve used today’s ${cfg.coach.perUserPerDay} coach messages. Try again tomorrow.`);
     coachLimiter.take(user.uid);
 
@@ -126,7 +126,10 @@ export function createApi(cfg, deps = {}) {
         close();
       }, (e) => {
         if (!abort.signal.aborted) console.error('[coach] failed:', e.message);
-        const err = e instanceof CoachError ? { code: e.code, message: e.message, status: e.status } : { code: 'coach_failed', message: 'Something went wrong with the coach. Try again.', status: 500 };
+        // Students get a plain message; the real reason (which names the AI provider) stays in the server log.
+        const code = e instanceof CoachError ? e.code : 'coach_failed';
+        const message = code === 'coach_busy' ? 'The coach is busy right now. Please try again in a minute.' : 'The coach had a problem. Please try again.';
+        const err = { code, message, status: e instanceof CoachError ? e.status : 500 };
         if (sentAny) push({ error: { code: err.code, message: err.message } });
         resolveFirst({ ok: false, err });
         close();
@@ -143,7 +146,7 @@ export function createApi(cfg, deps = {}) {
       if (pathname === '/api/config' && (request.method === 'GET' || request.method === 'HEAD')) {
         return json(200, {
           firebase: cfg.firebaseReady ? cfg.firebase : null, searchReady: Boolean(cfg.searchapi.apiKey), results: cfg.search.results, maxKeywords: cfg.search.maxKeywords, perDay: cfg.search.perUserPerDay,
-          coachReady: Boolean(cfg.coach.apiKey), coachModel: cfg.coach.model, coachProvider: cfg.coach.providerLabel,
+          coachReady: Boolean(cfg.coach.apiKey),
         });
       }
       if (pathname === '/api/search') return request.method === 'POST' ? await search(request) : fail(405, 'method_not_allowed', 'Use POST');

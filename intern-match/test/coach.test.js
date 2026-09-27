@@ -68,9 +68,9 @@ test('needs sign-in, a key and a user message; maps OpenRouter errors', async ()
   const none = await listen(make({ OPENROUTER_API_KEY: '' }));
   const r1 = await ask(none, { messages: chat });
   assert.equal(r1.status, 503);
-  assert.match((await r1.json()).error.message, /GEMINI_API_KEY/);
+  assert.match((await r1.json()).error.message, /isn’t available yet/);
   const wrong = await listen(make({ OPENROUTER_API_KEY: 'nope' }));
-  assert.match((await (await ask(wrong, { messages: chat })).json()).error.message, /rejected the API key/);
+  assert.match((await (await ask(wrong, { messages: chat })).json()).error.message, /had a problem/);
   const busy = await listen(make({ OPENROUTER_API_KEY: 'or-key', OPENROUTER_MODEL: 'busy' }));
   const r2 = await ask(busy, { messages: chat });
   assert.equal(r2.status, 429);
@@ -109,16 +109,17 @@ test('works with a local Ollama (no key needed) and explains a missing model', a
   const base = await listen(make({ OPENROUTER_API_KEY: '', OLLAMA_MODEL: 'gemma4:e4b', OLLAMA_BASE_URL: `${o}/v1` }));
   const cfg = await (await fetch(`${base}/api/config`)).json();
   assert.equal(cfg.coachReady, true);
-  assert.equal(cfg.coachProvider, 'Ollama on this computer');
+  assert.equal(cfg.coachProvider, undefined, 'the provider is not shown to students');
+  assert.equal(settings({ OLLAMA_MODEL: 'gemma4:e4b' }).coach.providerLabel, 'Ollama on this computer');
   const out = await lines(await ask(base, { messages: chat }));
   assert.equal(out.filter((x) => x.t).map((x) => x.t).join(''), 'Xin chào từ Ollama');
   const req = seen.at(-1);
   assert.equal(req.url, '/v1/chat/completions');
   assert.equal(req.body.reasoning, undefined, 'no OpenRouter-only fields');
   const missing = await listen(make({ OLLAMA_MODEL: 'gemma4:26b', OLLAMA_BASE_URL: `${o}/v1` }));
-  assert.match((await (await ask(missing, { messages: chat })).json()).error.message, /ollama pull gemma4:26b/);
+  assert.match((await (await ask(missing, { messages: chat })).json()).error.message, /had a problem/);
   const off = await listen(make({ OLLAMA_MODEL: 'gemma4:e4b', OLLAMA_BASE_URL: 'http://127.0.0.1:9/v1' }));
-  assert.match((await (await ask(off, { messages: chat })).json()).error.message, /Ollama app is running/);
+  assert.match((await (await ask(off, { messages: chat })).json()).error.message, /had a problem/);
 });
 
 test('uses Google Gemini (OpenAI-compatible endpoint) when GEMINI_API_KEY is set, ahead of Ollama', async () => {
@@ -136,17 +137,18 @@ test('uses Google Gemini (OpenAI-compatible endpoint) when GEMINI_API_KEY is set
   const g = await listen(gem);
   const base = await listen(make({ GEMINI_API_KEY: 'AIza-test', GEMINI_BASE_URL: `${g}/v1beta/openai`, OLLAMA_MODEL: 'gemma4:e2b', OPENROUTER_API_KEY: 'or-key' }));
   const cfg = await (await fetch(`${base}/api/config`)).json();
-  assert.equal(cfg.coachProvider, 'Google Gemini API');
-  assert.equal(cfg.coachModel, 'gemini-flash-latest');
+  assert.equal(cfg.coachModel, undefined);
+  const c = settings({ GEMINI_API_KEY: 'AIza-test', OLLAMA_MODEL: 'gemma4:e2b', OPENROUTER_API_KEY: 'or-key' }).coach;
+  assert.equal(c.providerLabel, 'Google Gemini API');
+  assert.equal(c.model, 'gemini-flash-latest');
   const out = await lines(await ask(base, { messages: chat }));
   assert.equal(out.filter((x) => x.t).map((x) => x.t).join(''), 'Chào bạn, mình là Gemini.');
   const req = seen.at(-1);
   assert.equal(req.url, '/v1beta/openai/chat/completions');
   assert.equal(req.body.reasoning, undefined);
   const bad = await listen(make({ GEMINI_API_KEY: 'wrong', GEMINI_BASE_URL: `${g}/v1beta/openai` }));
-  assert.match((await (await ask(bad, { messages: chat })).json()).error.message, /GEMINI_API_KEY/);
-  const pinned = await listen(make({ GEMINI_API_KEY: 'AIza-test', COACH_PROVIDER: 'ollama', OLLAMA_MODEL: 'gemma4:e2b' }));
-  assert.equal((await (await fetch(`${pinned}/api/config`)).json()).coachProvider, 'Ollama on this computer');
+  assert.match((await (await ask(bad, { messages: chat })).json()).error.message, /had a problem/);
+  assert.equal(settings({ GEMINI_API_KEY: 'AIza-test', COACH_PROVIDER: 'ollama', OLLAMA_MODEL: 'gemma4:e2b' }).coach.providerLabel, 'Ollama on this computer');
 });
 
 test('falls back from a busy Gemini (503) to OpenRouter without the student noticing', async () => {
@@ -163,13 +165,11 @@ test('falls back from a busy Gemini (503) to OpenRouter without the student noti
   });
   const g = await listen(busy), o = await listen(or);
   const base = await listen(make({ GEMINI_API_KEY: 'AQ.test', GEMINI_BASE_URL: `${g}/v1beta/openai`, OPENROUTER_API_KEY: 'or-key', OPENROUTER_BASE_URL: `${o}/api/v1` }));
-  const cfg = await (await fetch(`${base}/api/config`)).json();
-  assert.equal(cfg.coachProvider, 'Google Gemini API');
   const out = await lines(await ask(base, { messages: chat }));
   assert.equal(out.filter((x) => x.t).map((x) => x.t).join(''), 'Gemma trả lời.');
   assert.deepEqual(calls.map((c) => c.name), ['gemini', 'gemini', 'openrouter'], 'one retry on Gemini, then OpenRouter');
   const only = await listen(make({ COACH_PROVIDERS: 'gemini', GEMINI_API_KEY: 'AQ.test', GEMINI_BASE_URL: `${g}/v1beta/openai`, OPENROUTER_API_KEY: 'or-key' }));
   const r = await ask(only, { messages: chat });
   assert.equal(r.status, 503);
-  assert.match((await r.json()).error.message, /Gemini is very busy/);
+  assert.match((await r.json()).error.message, /coach is busy/);
 });

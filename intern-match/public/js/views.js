@@ -128,7 +128,7 @@ export function home(ctx) {
         : h`<div class="hero-cta"><a class="btn btn-primary search-btn" href="#/signup">Create a free account ${icon('arrow')}</a><a class="btn btn-ghost-dark search-btn" href="#/login">Log in</a></div>`}
     </div></section>
   <section class="section" aria-labelledby="how-title"><div class="container how-grid">
-    <div class="how-panel grain"><p class="how-big">Unlock your potential<br>right now</p><p class="how-cap">Internships and no-experience roles in Ho Chi Minh City, picked for your major and skills.</p></div>
+    <div class="how-panel grain"><p class="how-big">Everyone starts somewhere.<br>Start here.</p><p class="how-cap">Internships and no-experience roles in Ho Chi Minh City, picked for your major and skills.</p></div>
     <div><p class="eyebrow">How it works</p><h2 id="how-title" class="h-section">How Intern Match works.</h2>
       <ol class="steps">${STEPS.map(([t, d], i) => h`<li><span class="step-n" aria-hidden="true">${pad(i + 1)}</span><h3 class="step-t">${t}</h3><p class="step-d">${d}</p></li>`)}</ol>
       <a class="link-arrow" href="#/how-it-works">What we keep and remove ${icon('arrow')}</a></div>
@@ -162,7 +162,7 @@ export function how() {
       <li>Jobs in other provinces, and overseas labour programmes.</li>
       <li>The same job posted on several sites. We keep one and list every site you can apply on.</li></ul></div></section>
     <section><h2 class="h2">How the top 10 is ordered</h2><p>A listing ranks higher when its title matches one of your keywords, when it mentions skills you have, and when it’s in one of your preferred areas. We show the reasons on each card rather than a score.</p></section>
-    <section><h2 class="h2">Career coach</h2><p>The coach is an AI model (Google Gemini, with Gemma as a backup). It reads your profile and your top 10 to suggest where to apply first, which skills to build, and to help with CV lines and interview practice. It only talks about listings you can see and can still make mistakes, so check details on the original website.</p></section>
+    <section><h2 class="h2">Career coach</h2><p>The coach is an AI assistant. It reads your profile and your top 10 to suggest where to apply first, which skills to build, and to help with CV lines and interview practice. It only talks about listings you can see and can still make mistakes, so check details on the original website.</p></section>
     <section><h2 class="h2">Your data</h2><p>Your account, profile, latest results and saved list are stored in your Firebase account and only you can read them. Intern Match never takes applications or CVs.</p></section>
   </div>`;
 }
@@ -423,7 +423,7 @@ export function coach(ctx, c) {
   const focus = c.focusJob;
   const head = h`<div class="page-head container"><p class="eyebrow">Career coach</p><h1 class="page-title" tabindex="-1">Ask your coach.</h1>
     <p class="lead">Where to apply first, which skills to build, CV lines and interview practice, based on your profile and your top 10.</p></div>`;
-  if (!ctx.config.coachReady) return h`${head}<div class="container page-body">${Empty('The coach isn’t set up yet.', 'Add GEMINI_API_KEY to the .env file and restart the server. See README.md.', '', false)}</div>`;
+  if (!ctx.config.coachReady) return h`${head}<div class="container page-body">${Empty('The coach isn’t available yet.', 'Please check back later.', '', false)}</div>`;
   const msgs = c.messages;
   const name = ctx.user && ctx.user.name ? ctx.user.name.split(' ').slice(-1)[0] : '';
   return h`${head}<div class="container coach">
@@ -452,7 +452,7 @@ export function coach(ctx, c) {
         <li class="${ctx.topCount ? 'is-set' : ''}">${icon(ctx.topCount ? 'check' : 'minus')}<span>${ctx.topCount ? `Your top ${ctx.topCount} listings` : 'No top 10 loaded yet'}</span></li>
       </ul>
       <p class="hint">${ctx.topCount ? '' : h`<a href="#/top">Open your top 10</a> so the coach can talk about real listings. `}<a href="#/profile">Edit profile</a></p>
-      <div class="pf-preview"><p class="hint">Model: ${ctx.config.coachModel || 'Gemma 4'} via ${ctx.config.coachProvider || 'OpenRouter'}. Chats aren’t saved: they’re cleared when you reload.</p>
+      <div class="pf-preview"><p class="hint">Chats aren’t saved: they’re cleared when you reload.</p>
         ${msgs.length ? h`<button type="button" class="btn btn-outline btn-sm" data-action="coach-reset" data-fk="coach-reset">${icon('refresh')}Start over</button>` : ''}</div>
     </aside>
   </div>`;

@@ -23,7 +23,8 @@ test('netlify function: config, streamed search, and OpenRouter coach', async ()
   const fn = await import('../netlify/functions/api.mjs');
   assert.equal(fn.config.path, '/api/*');
   const cfg = await (await fn.default(new Request('https://im.netlify.app/api/config'))).json();
-  assert.equal(cfg.coachProvider, 'OpenRouter', 'Ollama is ignored on Netlify');
+  assert.equal(cfg.coachReady, true);
+  assert.equal(cfg.coachProvider, undefined, 'the AI provider is not shown to students');
   const r = await fn.default(new Request('https://im.netlify.app/api/search', { method: 'POST', body: JSON.stringify({ keywords: ['Marketing'] }) }));
   assert.equal(r.status, 200);
   const out = JSON.parse(await r.text());
