@@ -65,6 +65,8 @@ ol.card-grid{list-style:none}
 
 /* Detail */
 .desc p{margin:0 0 12px;max-width:72ch;overflow-wrap:anywhere}
+.desc-h{font-size:17px;font-weight:700;line-height:1.35;margin:22px 0 10px;max-width:72ch;overflow-wrap:anywhere}
+.desc-h:first-child{margin-top:0}
 .why{gap:8px}
 .ap-link .icon{margin-left:auto}
 

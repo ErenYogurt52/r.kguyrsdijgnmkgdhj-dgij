@@ -5,6 +5,7 @@ import * as View from './views.js';
 import { SPRITE, icon } from './icons.js';
 import { toHtml, esc } from './html.js';
 import { fold, AREAS } from './reference.js';
+import { htmlToText } from './text.js';
 
 const EMPTY_PROFILE = () => ({ university: '', major: '', year: '', keywords: [], skills: [], areas: [], modes: [] });
 const AREA_IDS = new Set(AREAS.map((a) => a.id));
@@ -137,7 +138,7 @@ function coachJobs() {
   if (f && !list.some((j) => j.id === f.id)) list.push(f);
   return list.slice(0, 12).map((j) => ({
     id: j.id, title: j.title, company: j.company, location: j.location, kind: j.kind, salary: j.salary, scheduleType: j.scheduleType, postedAt: j.postedAt, via: j.via,
-    summary: [...(j.highlights || []).flatMap((hl) => [`${hl.title}:`, ...hl.items.slice(0, 6)]), j.description || ''].join(' ').slice(0, 900),
+    summary: htmlToText([...(j.highlights || []).flatMap((hl) => [`${hl.title}:`, ...hl.items.slice(0, 6)]), j.description || ''].join(' ')).replace(/\s+/g, ' ').slice(0, 900),
   }));
 }
 

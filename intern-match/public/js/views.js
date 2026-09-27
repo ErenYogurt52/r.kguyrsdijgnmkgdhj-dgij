@@ -1,6 +1,7 @@
 // Page and component templates. Pure functions: (state) → escaped HTML.
 import { h, raw, esc } from './html.js';
 import { icon, Logo, HERO_ART } from './icons.js';
+import { htmlToText } from './text.js';
 import { MAJORS, MAJOR_KEYWORDS, MAJOR_SKILLS, SKILL_NAMES, UNIVERSITIES, AREAS, MODES, YEARS } from './reference.js';
 
 const VI_RE = /[ăâđêôơưàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]/i;
@@ -122,13 +123,13 @@ export function home(ctx) {
     <div class="container hero-inner">
       <dl class="hero-facts"><div><dt>Picks</dt><dd>Your top 10</dd></div><div><dt>Location</dt><dd>Ho Chi Minh City</dd></div><div><dt>Apply</dt><dd>On the original website</dd></div></dl>
       <h1 id="hero-title" class="display">Find the right internship for your future.</h1>
-      <p class="hero-sub">Tell us what you study and what you’re looking for. We show your 10 best internships jobs in Ho Chi Minh City.</p>
+      <p class="hero-sub">Tell us what you study and what you’re looking for. We show your 10 best internships and no-experience jobs in Ho Chi Minh City.</p>
       ${ctx.user
         ? h`${SearchForm('', 'hero')}${kws.length ? h`<div class="quick quick-hero" role="group" aria-label="Your keywords">${kws.map((k) => h`<a class="chip" href="#/top?q=${encodeURIComponent(k)}">${txt(k)}</a>`)}<a class="chip chip-strong" href="#/top">${icon('sparkle', 'chip-ic')}See your top 10</a></div>` : ''}`
         : h`<div class="hero-cta"><a class="btn btn-primary search-btn" href="#/signup">Create a free account ${icon('arrow')}</a><a class="btn btn-ghost-dark search-btn" href="#/login">Log in</a></div>`}
     </div></section>
   <section class="section" aria-labelledby="how-title"><div class="container how-grid">
-    <div class="how-panel grain"><p class="how-big">Unlock your potential<br>right now</p><p class="how-cap">Internships and no-experience roles in Ho Chi Minh City, picked for your major and skills.</p></div>
+    <div class="how-panel grain"><p class="how-big">Everyone starts somewhere.<br>Start here.</p><p class="how-cap">Internships and no-experience roles in Ho Chi Minh City, picked for your major and skills.</p></div>
     <div><p class="eyebrow">How it works</p><h2 id="how-title" class="h-section">How Intern Match works.</h2>
       <ol class="steps">${STEPS.map(([t, d], i) => h`<li><span class="step-n" aria-hidden="true">${pad(i + 1)}</span><h3 class="step-t">${t}</h3><p class="step-d">${d}</p></li>`)}</ol>
       <a class="link-arrow" href="#/how-it-works">What we keep and remove ${icon('arrow')}</a></div>
@@ -333,7 +334,8 @@ export function top(ctx, route, s) {
 export function detail(ctx, j) {
   const target = applyTarget(j);
   const others = j.applyOptions.slice(1);
-  const paras = (j.description || '').split(/\n+/).map((p) => p.trim()).filter(Boolean);
+  // htmlToText also cleans results saved before descriptions were cleaned on the server.
+  const paras = htmlToText(j.description || '').split(/\n+/).map((p) => p.trim()).filter(Boolean);
   return h`<div class="container"><nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="#/top">Top 10</a></li><li aria-current="page">${txt(j.title)}</li></ol></nav></div>
   <div class="container detail has-bar">
     <header class="detail-head"><div class="detail-tags">${SourceBadge(j)}<span class="tag tag-kind">${kindLabel(j)}</span></div>
@@ -355,8 +357,8 @@ export function detail(ctx, j) {
       ${j.reasons && j.reasons.length ? h`<section class="match-panel" aria-labelledby="why-t"><h2 class="mp-title" id="why-t">Why it’s on your list</h2><ul class="ticks why">${[j.kindReason, ...j.reasons].filter(Boolean).map((r) => h`<li>${txt(r)}</li>`)}</ul></section>` : ''}
     </aside>
     <div class="detail-body">
-      ${j.highlights.map((hl) => h`<section><h2 class="h2">${txt(hl.title)}</h2><ul class="ticks">${hl.items.map((i) => h`<li>${txt(i)}</li>`)}</ul></section>`)}
-      ${paras.length ? h`<section><h2 class="h2">Full description</h2><div class="desc">${paras.map((p) => h`<p>${txt(p)}</p>`)}</div></section>` : ''}
+      ${j.highlights.map((hl) => h`<section><h2 class="h2">${txt(htmlToText(hl.title))}</h2><ul class="ticks">${hl.items.map((i) => h`<li>${txt(htmlToText(i))}</li>`)}</ul></section>`)}
+      ${paras.length ? h`<section><h2 class="h2">Full description</h2><div class="desc">${paras.map((p) => (p.startsWith('## ') ? h`<h3 class="desc-h">${txt(p.slice(3))}</h3>` : h`<p>${txt(p)}</p>`))}</div></section>` : ''}
       <section><h2 class="h2">Source</h2><p>${j.via ? h`Listed via ${txt(j.via)}. ` : ''}The original website has the final word on details and deadlines.</p>
         ${j.shareLink ? h`<p>${ext(j.shareLink, 'link-arrow', 'View the original listing', h`View the original listing ${icon('external')}`)}</p>` : ''}</section>
     </div>

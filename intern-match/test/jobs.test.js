@@ -112,3 +112,24 @@ test('every ward or commune name maps to its area', async () => {
     assert.equal(findArea(`${prefix} ${w.name}, Thành phố Hồ Chí Minh`).area, w.id.includes('thanh-an') ? findArea(`${prefix} ${w.name}`).area : expected, w.name);
   }
 });
+
+test('HTML job descriptions become plain text (tags removed, line breaks and headings kept)', async () => {
+  const { htmlToText } = await import('../public/js/text.js');
+  const { normalize } = await import('../server/jobs.js');
+  const raw = '<h2>Mô tả công việc</h2>\n<p>- Hỗ trợ kiểm tra hàng hóa.\n</p><p>- Nhập liệu &amp; lưu trữ.</p><h2>Yêu cầu ứng viên</h2><p>- Sinh viên năm cuối.<br>- Thành thạo Excel.<br/>- Kỹ năng giao tiếp tốt.</p>';
+  const j = normalize({ title: 'Data Intern &amp; Ops', company_name: 'CÔNG TY A', location: 'Hồ Chí Minh', description: raw,
+    job_highlights: [{ title: 'Qualifications', items: ['<p>Excel</p>', 'SQL &gt; basics'] }] });
+  assert.doesNotMatch(j.description, /<\/?(p|h2|br)/i);
+  assert.deepEqual(j.description.split('\n').filter(Boolean), [
+    '## Mô tả công việc', '- Hỗ trợ kiểm tra hàng hóa.', '- Nhập liệu & lưu trữ.', '## Yêu cầu ứng viên',
+    '- Sinh viên năm cuối.', '- Thành thạo Excel.', '- Kỹ năng giao tiếp tốt.',
+  ]);
+  assert.equal(j.title, 'Data Intern & Ops');
+  assert.deepEqual(j.highlights[0].items, ['Excel', 'SQL > basics']);
+  // Plain text and things that only look a bit like tags stay as they are.
+  assert.equal(htmlToText('Need <5 years? a < b > c'), 'Need <5 years? a < b > c');
+  assert.equal(htmlToText('Line 1\nLine 2'), 'Line 1\nLine 2');
+  assert.equal(htmlToText('&lt;p&gt;Escaped&lt;/p&gt; &#39;x&#39;'), "Escaped\n'x'");
+  assert.equal(htmlToText('<ul><li>One</li><li>Two</li></ul>'), '- One\n- Two');
+  assert.equal(htmlToText('<script>alert(1)</script>Hi'), 'Hi');
+});

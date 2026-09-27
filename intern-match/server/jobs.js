@@ -3,8 +3,9 @@
 // Pure functions except runSearch(), which takes the SearchApi client as a parameter.
 import { createHash } from 'node:crypto';
 import { fold, WARDS, FORMER, areaByKey, SKILL_ALIASES } from '../public/js/reference.js';
+import { htmlToText } from '../public/js/text.js';
 
-const clean = (s, max = 300) => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+const clean = (s, max = 300) => htmlToText(s).replace(/\s+/g, ' ').trim().slice(0, max);
 const isVietnamese = (s) => fold(s) !== String(s).toLowerCase();
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // Word-bounded phrase test on folded text; `suffix` allows endings like "recruit" → "recruitment".
@@ -65,7 +66,8 @@ export function normalize(raw) {
     workFromHome: Boolean(de.work_from_home) || extensions.some((e) => WFH.test(e)),
     salary: salary ? clean(salary, 80) : null,
     extensions,
-    description: String(raw.description ?? '').replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim().slice(0, 8000),
+    // Some sites send HTML (<p>, <br>, <h2>…): keep the text and the line breaks, drop the tags.
+    description: htmlToText(raw.description).replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim().slice(0, 8000),
     highlights, applyOptions,
     shareLink: isHttp(raw.sharing_link) ? raw.sharing_link : null,
   };
