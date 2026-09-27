@@ -6,6 +6,9 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  # Firebase web config values are public by design (they are sent to every browser),
+  # so Netlify's secret scanner should not fail the build when they appear in the code or README.
+  SECRETS_SCAN_OMIT_KEYS = "FIREBASE_API_KEY,FIREBASE_APP_ID,FIREBASE_AUTH_DOMAIN,FIREBASE_MESSAGING_SENDER_ID,FIREBASE_PROJECT_ID,FIREBASE_STORAGE_BUCKET"
 
 [functions]
   node_bundler = "esbuild"

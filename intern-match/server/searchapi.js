@@ -5,7 +5,8 @@ export class SearchApiError extends Error {
   constructor(message, status) { super(message); this.name = 'SearchApiError'; this.status = status; }
 }
 
-const NO_RESULTS = /(hasn['’]t returned any results|no results)/i;
+// SearchApi reports an empty search as an error, e.g. "Google Jobs didn't return any results."
+const NO_RESULTS = /(return(ed)?\s+any\s+results|no\s+results|0\s+results)/i;
 
 export function createSearchApi({ apiKey, baseUrl, location, hl, gl, timeoutMs, cache, fetchImpl = fetch }) {
   let useLocation = Boolean(location);
@@ -13,7 +14,14 @@ export function createSearchApi({ apiKey, baseUrl, location, hl, gl, timeoutMs, 
   async function jobs({ q, nextPageToken, fresh = false }) {
     if (!apiKey) throw new SearchApiError('Search is not set up: add SEARCHAPI_KEY to .env', 503);
     try {
-      return await call({ q, nextPageToken, fresh });
+      const out = await call({ q, nextPageToken, fresh });
+      // Google Jobs sometimes finds nothing for the location filter but does find jobs when the
+      // city is in the query itself, so try that once before giving up on this query.
+      if (useLocation && !nextPageToken && !out.data.jobs_results.length) {
+        const alt = await call({ q, nextPageToken, fresh, noLocation: true });
+        if (alt.data.jobs_results.length) return { ...alt, cached: out.cached && alt.cached };
+      }
+      return out;
     } catch (e) {
       // If SearchApi doesn't recognise the location name, fall back to putting the city in the query.
       if (useLocation && e instanceof SearchApiError && /location/i.test(e.message) && !nextPageToken) {
@@ -25,8 +33,8 @@ export function createSearchApi({ apiKey, baseUrl, location, hl, gl, timeoutMs, 
     }
   }
 
-  async function call({ q, nextPageToken, fresh }) {
-    const params = useLocation ? { engine: 'google_jobs', q, location, hl, gl } : { engine: 'google_jobs', q: `${q} Hồ Chí Minh`, hl, gl };
+  async function call({ q, nextPageToken, fresh, noLocation = false }) {
+    const params = useLocation && !noLocation ? { engine: 'google_jobs', q, location, hl, gl } : { engine: 'google_jobs', q: `${q} Hồ Chí Minh`, hl, gl };
     if (nextPageToken) params.next_page_token = nextPageToken;
     const key = JSON.stringify(params);
     const hit = cache && !fresh && (await cache.get(key));
