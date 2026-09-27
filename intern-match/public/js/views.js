@@ -122,7 +122,7 @@ export function home(ctx) {
     <div class="container hero-inner">
       <dl class="hero-facts"><div><dt>Picks</dt><dd>Your top 10</dd></div><div><dt>Location</dt><dd>Ho Chi Minh City</dd></div><div><dt>Apply</dt><dd>On the original website</dd></div></dl>
       <h1 id="hero-title" class="display">Find the right internship for your future.</h1>
-      <p class="hero-sub">Tell us what you study and what you’re looking for. We show your 10 best internships and no-experience jobs in Ho Chi Minh City.</p>
+      <p class="hero-sub">Tell us what you study and what you’re looking for. We show your 10 best internships jobs in Ho Chi Minh City.</p>
       ${ctx.user
         ? h`${SearchForm('', 'hero')}${kws.length ? h`<div class="quick quick-hero" role="group" aria-label="Your keywords">${kws.map((k) => h`<a class="chip" href="#/top?q=${encodeURIComponent(k)}">${txt(k)}</a>`)}<a class="chip chip-strong" href="#/top">${icon('sparkle', 'chip-ic')}See your top 10</a></div>` : ''}`
         : h`<div class="hero-cta"><a class="btn btn-primary search-btn" href="#/signup">Create a free account ${icon('arrow')}</a><a class="btn btn-ghost-dark search-btn" href="#/login">Log in</a></div>`}
