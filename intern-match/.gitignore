@@ -1,0 +1,11 @@
+node_modules/
+.env
+.cache/
+*.log
+.DS_Store
+
+# Netlify
+.netlify/
+
+# Coach mascot image (kept private, not committed)
+public/img/coach.png
