@@ -125,3 +125,8 @@ ol.card-grid{list-style:none}
 @keyframes coach-bounce{50%{transform:translateY(-5px)}}
 @keyframes coach-float{50%{transform:translateY(-6px) rotate(-3deg)}}
 @media (prefers-reduced-motion:reduce){.coach-avatar{animation:none!important}}
+
+/* Category tiles: every tile in the grid has the same height, whatever the text length */
+.tiles{grid-auto-rows:1fr}
+.tiles>li{display:flex;min-width:0}
+.tiles>li>.tile{flex:1;min-width:0}
