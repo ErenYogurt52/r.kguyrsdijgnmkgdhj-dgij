@@ -4,13 +4,14 @@ import { getConfig, searchJobs, coachStream } from './api.js';
 import * as View from './views.js';
 import { SPRITE, icon } from './icons.js';
 import { toHtml, esc } from './html.js';
-import { fold, AREAS } from './reference.js';
+import { fold, AREAS, JOB_TYPES } from './reference.js';
 import { htmlToText } from './text.js';
 
-const EMPTY_PROFILE = () => ({ university: '', major: '', year: '', keywords: [], skills: [], areas: [], modes: [] });
+const EMPTY_PROFILE = () => ({ university: '', major: '', year: '', keywords: [], skills: [], areas: [], modes: [], jobType: 'any' });
+const JOB_TYPE_IDS = new Set(JOB_TYPES.map(([id]) => id));
 const AREA_IDS = new Set(AREAS.map((a) => a.id));
 // Keeps only area ids that still exist.
-const cleanProfile = (p) => ({ ...EMPTY_PROFILE(), ...(p || {}), keywords: [...((p && p.keywords) || [])], skills: [...((p && p.skills) || [])], areas: ((p && p.areas) || []).filter((id) => AREA_IDS.has(id)), modes: [...((p && p.modes) || [])] });
+const cleanProfile = (p) => ({ ...EMPTY_PROFILE(), ...(p || {}), keywords: [...((p && p.keywords) || [])], skills: [...((p && p.skills) || [])], areas: ((p && p.areas) || []).filter((id) => AREA_IDS.has(id)), modes: [...((p && p.modes) || [])], jobType: JOB_TYPE_IDS.has(p && p.jobType) ? p.jobType : 'any' });
 
 const S = {
   config: null, coachAvatar: false, user: undefined, loadedUid: null, loadingUser: false, dataError: null,
@@ -44,8 +45,9 @@ function go(path) {
 
 const hasKeywords = () => Boolean(S.profile && S.profile.keywords.length);
 const maxKw = () => (S.config && S.config.maxKeywords) || 3;
-const profileKey = (p) => JSON.stringify([p.keywords.slice(0, maxKw()), p.skills, p.areas, p.modes]);
-const searchKey = (r) => (r.params.q ? `q:${fold(r.params.q).trim()}` : `p:${profileKey(S.profile)}`);
+const profileKey = (p) => JSON.stringify([p.keywords.slice(0, maxKw()), p.skills, p.areas, p.modes, p.jobType || 'any']);
+const jobType = () => (S.profile && S.profile.jobType) || 'any';
+const searchKey = (r) => (r.params.q ? `q:${fold(r.params.q).trim()}|${jobType()}` : `p:${profileKey(S.profile)}`);
 
 function route(opts = {}) {
   R = parseHash();
@@ -137,7 +139,7 @@ function coachJobs() {
   const f = S.coach.focus && S.jobs.get(S.coach.focus);
   if (f && !list.some((j) => j.id === f.id)) list.push(f);
   return list.slice(0, 12).map((j) => ({
-    id: j.id, title: j.title, company: j.company, location: j.location, kind: j.kind, salary: j.salary, scheduleType: j.scheduleType, postedAt: j.postedAt, via: j.via,
+    id: j.id, title: j.title, company: j.company, location: j.location, kind: j.kind, salary: j.salary, scheduleType: View.jobTypeText(j), postedAt: j.postedAt, via: j.via,
     summary: htmlToText([...(j.highlights || []).flatMap((hl) => [`${hl.title}:`, ...hl.items.slice(0, 6)]), j.description || ''].join(' ')).replace(/\s+/g, ' ').slice(0, 900),
   }));
 }
@@ -368,6 +370,14 @@ const actions = {
   },
   retry: () => runSearch(R, false),
   refresh: () => runSearch(R, true),
+  // Job type filter on the Top 10 page: remembered in the profile, and a new search runs for it.
+  jobtype: (el) => {
+    const v = el.dataset.value;
+    if (!S.profile || !JOB_TYPE_IDS.has(v) || jobType() === v) return;
+    S.profile = { ...S.profile, jobType: v };
+    if (S.user) FB.saveProfile(S.user.uid, S.profile).catch((e) => toast(friendly(e) || 'Could not save your job type.'));
+    route({ keepFocus: true });
+  },
   'chip-add': (el) => {
     const list = el.dataset.list;
     const input = document.getElementById(`pf-${list}`);

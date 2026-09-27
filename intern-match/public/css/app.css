@@ -132,3 +132,11 @@ ol.card-grid{list-style:none}
 .tiles{grid-auto-rows:1fr}
 .tiles>li{display:flex;min-width:0}
 .tiles>li>.tile{flex:1;min-width:0}
+
+/* Job type filter (Top 10 page) */
+.jt-filter{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px}
+.jt-label{font-size:14px;color:var(--text-2);margin-right:4px}
+.jt-opt{min-height:40px;padding:0 16px;border:1px solid var(--rule-2);background:transparent;color:var(--text);font-size:14px;font-weight:600;cursor:pointer}
+.jt-opt:hover{border-color:var(--accent);color:var(--accent)}
+.jt-opt[aria-pressed="true"]{background:var(--chip-on);border-color:var(--chip-on);color:var(--chip-on-ink)}
+@media (max-width:640px){.jt-label{flex-basis:100%;margin:0}.jt-opt{flex:1;padding:0 10px}}

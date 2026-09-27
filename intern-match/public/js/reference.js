@@ -176,6 +176,8 @@ export const AREAS = [
 ].map(([id, key, name]) => ({ id, key, name }));
 
 export const MODES = [['onsite', 'On-site'], ['hybrid', 'Hybrid'], ['remote', 'Remote']];
+// Job type filter. 'any' shows everything; the others keep only listings that say full-time / part-time.
+export const JOB_TYPES = [['any', 'Any'], ['fulltime', 'Full-time'], ['parttime', 'Part-time']];
 export const YEARS = [['1', 'Year 1'], ['2', 'Year 2'], ['3', 'Year 3'], ['4', 'Year 4 or final'], ['grad', 'Recent graduate']];
 
 export const majorName = (id) => (MAJORS.find((m) => m.id === id) || {}).name || '';

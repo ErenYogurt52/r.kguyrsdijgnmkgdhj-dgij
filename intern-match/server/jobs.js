@@ -41,6 +41,7 @@ const WFH = /(work from home|remote|làm việc tại nhà|làm việc từ xa|t
 const isHttp = (u) => typeof u === 'string' && /^https?:\/\//i.test(u);
 
 export function normalize(raw) {
+  let job;
   const de = raw.detected_extensions || {};
   const extensions = (raw.extensions || []).map((e) => clean(e, 60)).slice(0, 10);
   const title = clean(raw.title, 200), company = clean(raw.company_name, 160), location = clean(raw.location, 160);
@@ -57,7 +58,7 @@ export function normalize(raw) {
     .filter((h) => h.items.length);
   const schedule = de.schedule || de.schedule_type;
   const salary = de.salary || extensions.find((e) => MONEY.test(e));
-  return {
+  job = {
     id: createHash('sha256').update(`${fold(title)}|${fold(company)}|${fold(location)}`).digest('hex').slice(0, 20),
     title, company, location, via,
     thumbnail: typeof raw.thumbnail === 'string' && /^https:\/\//.test(raw.thumbnail) ? raw.thumbnail.slice(0, 1000) : null,
@@ -71,7 +72,35 @@ export function normalize(raw) {
     highlights, applyOptions,
     shareLink: isHttp(raw.sharing_link) ? raw.sharing_link : null,
   };
+  job.jobTypes = jobTypesOf(job);
+  return job;
 }
+
+/* ---------- Job type: full-time / part-time ---------- */
+const PART_TIME = /(?<![a-z])(part[ \-–]?time|partime|ban thoi gian)(?![a-z])/;
+const FULL_TIME = /(?<![a-z])(full[ \-–]?time|toan thoi gian)(?![a-z])/g;
+// "…chance to become a full-time employee" is about after the internship, not this job.
+const LATER = /(?<![a-z])(tro thanh|thanh nhan vien|become|becoming|convert|chuyen|len|offer|co hoi)(?![a-z])[^.;\n]{0,30}$/;
+const TYPE_WORDS = { fulltime: 'Full-time', parttime: 'Part-time' };
+export const jobTypeLabel = (t) => TYPE_WORDS[t] || '';
+
+// Which job types a listing says it is: ['fulltime'], ['parttime'], both, or [] when it doesn't say.
+// The schedule Google shows ("Full-time", "Part-time") wins; otherwise the text decides.
+export function jobTypesOf(job) {
+  const head = fold([job.scheduleType || '', ...(job.extensions || []), job.title || ''].join(' | '));
+  const types = new Set();
+  if (FULL_TIME.test(head)) types.add('fulltime');
+  FULL_TIME.lastIndex = 0;
+  if (PART_TIME.test(head)) types.add('parttime');
+  if (types.size) return [...types];
+  const body = fold([job.description || '', ...(job.highlights || []).flatMap((h) => h.items)].join('\n'));
+  if (PART_TIME.test(body)) types.add('parttime');
+  for (const m of body.matchAll(FULL_TIME)) {
+    if (!LATER.test(body.slice(Math.max(0, m.index - 60), m.index))) { types.add('fulltime'); break; }
+  }
+  return [...types];
+}
+const typeSuffix = (q, jt) => (isVietnamese(q) ? { parttime: 'bán thời gian', fulltime: 'toàn thời gian' } : { parttime: 'part time', fulltime: 'full time' })[jt];
 
 /* ---------- Location: Ho Chi Minh City only ---------- */
 const HCM_STRONG = ['ho chi minh', 'hcm', 'tp hcm', 'tphcm', 'hcmc', 'sai gon', 'saigon', 'thu duc', 'binh duong', 'thu dau mot', 'di an', 'thuan an', 'vung tau', 'ba ria'];
@@ -213,12 +242,16 @@ export function relevance(entry, profile, keywords) {
   if (j.area && mine.includes(j.area)) { score += 1; reasons.push('In one of your preferred areas'); }
   if (j.remote && (profile.modes || []).includes('remote')) { score += 1; reasons.push('Can be done remotely'); }
   if (j.kind === 'internship') score += 0.5;
+  if (profile.jobType && j.jobTypes && j.jobTypes.includes(profile.jobType)) reasons.push(jobTypeLabel(profile.jobType));
   return { score, reasons };
 }
 
 /* ---------- Orchestration ---------- */
 export async function runSearch({ keywords, profile = {}, serp, limit = 10, maxCalls = 4, fresh = false }) {
-  const stats = { calls: 0, cachedCalls: 0, seen: 0, kept: 0, removed: { experience: 0, senior: 0, abroad: 0, location: 0, duplicate: 0 } };
+  const stats = { calls: 0, cachedCalls: 0, seen: 0, kept: 0, removed: { experience: 0, senior: 0, abroad: 0, location: 0, jobType: 0, duplicate: 0 } };
+  // Job type filter: the searches ask Google for it, and listings that don't say it are left out.
+  const jt = profile.jobType === 'fulltime' || profile.jobType === 'parttime' ? profile.jobType : null;
+  const form = (kw, i) => { const q = queriesFor(kw)[i]; return jt ? `${q} ${typeSuffix(q, jt)}` : q; };
   const queries = [], errors = [];
   const pool = new Map();
 
@@ -230,6 +263,7 @@ export async function runSearch({ keywords, profile = {}, serp, limit = 10, maxC
     if (!loc.ok) { stats.removed.location++; return; }
     const el = checkEligibility(job);
     if (!el.ok) { stats.removed[el.why]++; return; }
+    if (jt && !job.jobTypes.includes(jt)) { stats.removed.jobType++; return; }
     const key = dedupeKey(job);
     const prev = pool.get(key);
     if (prev) {
@@ -242,7 +276,7 @@ export async function runSearch({ keywords, profile = {}, serp, limit = 10, maxC
   };
 
   // Rounds: first query per keyword → page 2 of those → second query form → "no experience" query.
-  let round = 0, current = keywords.map((kw) => ({ kw, q: queriesFor(kw)[0], page: 1 }));
+  let round = 0, current = keywords.map((kw) => ({ kw, q: form(kw, 0), page: 1 }));
   const nextForms = [1, 2];
   while (current.length && pool.size < limit) {
     const batch = current.slice(0, Math.max(0, maxCalls - stats.calls));
@@ -259,12 +293,12 @@ export async function runSearch({ keywords, profile = {}, serp, limit = 10, maxC
     if (!queries.length && errors.length) throw errors[0]; // nothing worked (bad key, no credits…)
     round++;
     if (round === 1 && nextPages.length) current = nextPages;
-    else { const f = nextForms.shift(); current = f === undefined ? [] : keywords.map((kw) => ({ kw, q: queriesFor(kw)[f], page: 1 })); }
+    else { const f = nextForms.shift(); current = f === undefined ? [] : keywords.map((kw) => ({ kw, q: form(kw, f), page: 1 })); }
   }
 
   const ranked = [...pool.values()].map((entry) => ({ entry, ...relevance(entry, profile, keywords) }))
     .sort((a, b) => b.score - a.score || a.entry.order[0] - b.entry.order[0] || a.entry.order[1] - b.entry.order[1] || a.entry.order[2] - b.entry.order[2]);
   const jobs = ranked.slice(0, limit).map(({ entry, reasons }) => ({ ...entry.job, keywords: entry.keywords, reasons }));
   stats.kept = pool.size;
-  return { jobs, meta: { keywords, queries, stats, partial: errors.length > 0, warning: errors.length ? errors[0].message : null } };
+  return { jobs, meta: { keywords, jobType: jt || 'any', queries, stats, partial: errors.length > 0, warning: errors.length ? errors[0].message : null } };
 }

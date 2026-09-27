@@ -101,3 +101,14 @@ test('an unknown location falls back to the city name in the query', async () =>
   assert.equal(r.status, 200);
   assert.ok(calls.some((c) => c.q === 'Marketing intern Hồ Chí Minh' && !c.location));
 });
+
+test('the job type filter reaches the search (and unknown values fall back to any)', async () => {
+  const srv = await listen(makeServer({ SEARCHAPI_KEY: 'test-key' }));
+  const before = calls.length;
+  const r = await post(srv, { keywords: ['Marketing'], profile: { jobType: 'parttime' } });
+  assert.equal(r.status, 200);
+  assert.equal((await r.json()).meta.jobType, 'parttime');
+  assert.ok(calls.slice(before).some((c) => c.q === 'Marketing intern part time'), JSON.stringify(calls.slice(before)));
+  const odd = await post(srv, { keywords: ['Marketing'], profile: { jobType: 'weekends' } });
+  assert.equal((await odd.json()).meta.jobType, 'any');
+});

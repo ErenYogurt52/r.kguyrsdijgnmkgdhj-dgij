@@ -2,7 +2,7 @@
 import { h, raw, esc } from './html.js';
 import { icon, Logo, HERO_ART } from './icons.js';
 import { htmlToText } from './text.js';
-import { MAJORS, MAJOR_KEYWORDS, MAJOR_SKILLS, SKILL_NAMES, UNIVERSITIES, AREAS, MODES, YEARS } from './reference.js';
+import { MAJORS, MAJOR_KEYWORDS, MAJOR_SKILLS, SKILL_NAMES, UNIVERSITIES, AREAS, MODES, YEARS, JOB_TYPES, fold } from './reference.js';
 
 const VI_RE = /[ăâđêôơưàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]/i;
 export const txt = (t) => (VI_RE.test(t || '') ? h`<span lang="vi">${t}</span>` : t);
@@ -18,6 +18,16 @@ export function ago(ms) {
 }
 export const queryFor = (k) => (VI_RE.test(k) ? `thực tập sinh ${k}` : `${k} intern`);
 const kindLabel = (j) => (j.kind === 'internship' ? 'Internship' : 'No experience needed');
+// Job type tags: the schedule the listing shows, plus Full-time / Part-time when only the text says so.
+const TYPE_TEXT = { fulltime: ['Full-time', /full[ \-–]?time|toan thoi gian/], parttime: ['Part-time', /part[ \-–]?time|partime|ban thoi gian/] };
+export function jobTypeTags(j) {
+  const sched = j.scheduleType && fold(j.scheduleType) !== fold(kindLabel(j)) ? j.scheduleType : '';
+  const tags = sched ? [sched] : [];
+  for (const t of j.jobTypes || []) if (TYPE_TEXT[t] && !TYPE_TEXT[t][1].test(fold(sched))) tags.push(TYPE_TEXT[t][0]);
+  return tags;
+}
+export const jobTypeText = (j) => [...new Set([j.scheduleType, ...jobTypeTags(j)].filter(Boolean))].join(', ');
+const typeName = (id) => (JOB_TYPES.find(([v]) => v === id) || [, ''])[1];
 export const applyTarget = (j) => j.applyOptions[0] || (j.shareLink ? { title: 'Original listing', link: j.shareLink } : null);
 const locLine = (j) => {
   if (j.remote && !j.area && !j.location) return 'Remote, Vietnam';
@@ -77,6 +87,12 @@ export function SearchForm(q, variant, placeholder = 'Search by role or field, e
   </form>`;
 }
 
+// Full-time / part-time filter shown under the search bar on the Top 10 page.
+function JobTypeFilter(ctx) {
+  const cur = (ctx.profile && ctx.profile.jobType) || 'any';
+  return h`<div class="jt-filter" role="group" aria-label="Job type"><span class="jt-label">Job type</span>${JOB_TYPES.map(([v, l]) => h`<button type="button" class="jt-opt" data-action="jobtype" data-value="${v}" aria-pressed="${cur === v ? 'true' : 'false'}" data-fk="jt-${v}">${l}</button>`)}</div>`;
+}
+
 export function SaveButton(j, ctx, variant = 'card', prefix = 'c') {
   const on = ctx.savedIds.has(j.id);
   return h`<button type="button" class="btn btn-save btn-save-${variant}" data-action="save" data-id="${j.id}" aria-pressed="${on ? 'true' : 'false'}" aria-label="${on ? 'Remove from saved' : 'Save'}: ${j.title}, ${j.company}" title="${on ? 'Saved' : 'Save'}" data-fk="save-${variant}-${prefix}-${j.id}">${icon(on ? 'bookmark-fill' : 'bookmark')}${variant === 'card' ? '' : h`<span class="save-text">${on ? 'Saved' : 'Save'}</span>`}</button>`;
@@ -92,7 +108,7 @@ export function JobCard(j, ctx, opts = {}) {
     <div><h3 class="jc-title" id="${tid}"><a href="#/internships/${j.id}" data-fk="card-${p}-${j.id}">${txt(j.title)}</a></h3><p class="jc-company">${txt(j.company)}</p></div>
     ${j.salary ? h`<p class="jc-salary">${txt(j.salary)}</p>` : ''}
     <p class="jc-loc">${icon('pin')}<span>${locLine(j)}</span></p>
-    <ul class="tags" aria-label="Details"><li class="tag tag-kind">${kindLabel(j)}</li>${j.scheduleType && j.scheduleType.toLowerCase() !== kindLabel(j).toLowerCase() ? h`<li class="tag">${txt(j.scheduleType)}</li>` : ''}</ul>
+    <ul class="tags" aria-label="Details"><li class="tag tag-kind">${kindLabel(j)}</li>${jobTypeTags(j).map((t) => h`<li class="tag">${txt(t)}</li>`)}</ul>
     ${j.reasons && j.reasons.length ? h`<p class="jc-reason">${icon('sparkle')}<span>${txt(j.reasons.slice(0, 2).join(' · '))}</span></p>` : ''}
     <div class="jc-dates"><span>${j.postedAt ? h`Posted ${txt(j.postedAt)}` : 'Posting date not listed'}</span>${opts.savedAt ? h`<span>Saved ${ago(opts.savedAt)}</span>` : ''}</div>
     <div class="jc-actions">${target
@@ -163,6 +179,7 @@ export function how() {
       <li>Jobs in other provinces, and overseas labour programmes.</li>
       <li>The same job posted on several sites. We keep one and list every site you can apply on.</li></ul></div></section>
     <section><h2 class="h2">How the top 10 is ordered</h2><p>A listing ranks higher when its title matches one of your keywords, when it mentions skills you have, and when it’s in one of your preferred areas. We show the reasons on each card rather than a score.</p></section>
+    <section><h2 class="h2">Full-time or part-time</h2><p>Pick a job type on your Top 10 page or in your profile. With Full-time or Part-time, we search for that type and only show listings that say they are full-time or part-time. Many listings don’t say, so choose Any to see everything.</p></section>
     <section><h2 class="h2">Career coach</h2><p>The coach is an AI assistant. It reads your profile and your top 10 to suggest where to apply first, which skills to build, and to help with CV lines and interview practice. It only talks about listings you can see and can still make mistakes, so check details on the original website.</p></section>
     <section><h2 class="h2">Your data</h2><p>Your account, profile, latest results and saved list are stored in your Firebase account and only you can read them. Intern Match never takes applications or CVs.</p></section>
   </div>`;
@@ -248,7 +265,8 @@ export function ProfileForm(d, ctx, mode) {
         <datalist id="skill-options">${SKILL_NAMES.map((s) => h`<option value="${s}"></option>`)}</datalist></div></section>
       <section class="pf-sec" aria-labelledby="pf-s4"><p class="pf-num" aria-hidden="true">04</p><div class="pf-fields"><h2 class="h2" id="pf-s4">Preferences</h2>
         ${Checks('areas', 'Preferred areas', AREAS.map((a) => [a.id, a.name]), d.areas)}
-        ${Checks('modes', 'Working mode', MODES, d.modes)}</div></section>
+        ${Checks('modes', 'Working mode', MODES, d.modes)}
+        ${Seg('jobType', 'Job type', JOB_TYPES, d.jobType || 'any')}</div></section>
       <div class="pf-actions"><button class="btn btn-primary" type="submit" data-fk="pf-save"${ctx.busy ? raw(' disabled aria-busy="true"') : ''}>${mode === 'welcome' ? h`Find my top 10 ${icon('arrow')}` : 'Save profile'}</button>
         ${mode === 'welcome' ? '' : h`<a class="btn btn-outline" href="#/top">Cancel</a>`}</div>
       <p class="hint">Stored in your account. Nothing is sent to employers.</p>
@@ -309,9 +327,11 @@ export function top(ctx, route, s) {
     <div class="rec-summary">${q
       ? h`<a class="link-arrow" href="#/top">${icon('arrow', 'flip')}Back to your top 10</a>`
       : h`<span class="muted">Your keywords:</span>${kws.map((k) => h`<span class="af-locked">${txt(k)}</span>`)}<a class="link-btn" href="#/profile">Edit keywords</a>`}</div>
-    ${SearchForm(q || '', 'page', 'Try other keywords')}</div>`;
+    ${SearchForm(q || '', 'page', 'Try other keywords')}
+    ${JobTypeFilter(ctx)}</div>`;
   let body;
-  if (!s || s.status === 'loading') body = h`<p class="loading-line" role="status">${icon('search')}Searching for ${txt(kws.map((k) => `“${k}”`).join(', '))}…</p>${SkeletonGrid(6)}`;
+  const jt = (ctx.profile && ctx.profile.jobType) || 'any';
+  if (!s || s.status === 'loading') body = h`<p class="loading-line" role="status">${icon('search')}Searching for ${txt(kws.map((k) => `“${k}”`).join(', '))}${jt !== 'any' ? ` (${typeName(jt).toLowerCase()})` : ''}…</p>${SkeletonGrid(6)}`;
   else if (s.status === 'error') {
     const e = s.error;
     const actions = e.code === 'no_keywords' ? h`<a class="btn btn-primary" href="#/profile">Add keywords</a>`
@@ -325,6 +345,8 @@ export function top(ctx, route, s) {
       ? h`${Grid(jobs, ctx, { prefix: 'r', ranked: true })}
         <div class="results-foot"><p class="fine">${meta.searchedAt ? `Updated ${ago(Date.parse(meta.searchedAt))}. ` : ''}Checked ${plural(st.seen || 0, 'listing')}, kept ${st.kept || 0}${st.kept > jobs.length ? `, showing the best ${jobs.length}` : ''}.${meta.partial ? ' Some searches failed, so this list may be shorter.' : ''}</p>
           <button type="button" class="btn btn-outline btn-sm" data-action="refresh" data-fk="refresh">${icon('refresh')}Search again</button></div>`
+      : jt !== 'any'
+        ? Empty(`No ${typeName(jt).toLowerCase()} jobs right now.`, `We found no ${typeName(jt).toLowerCase()} internships or no-experience jobs in Ho Chi Minh City for ${kws.map((k) => `“${k}”`).join(', ')}. Many listings don’t say whether they are full-time or part-time, so try Any.`, h`<button type="button" class="btn btn-primary" data-action="jobtype" data-value="any">Show any job type</button><a class="btn btn-outline" href="#/profile">Edit keywords</a>`)
       : Empty('Nothing that fits right now.', `We found no internships or no-experience jobs in Ho Chi Minh City for ${kws.map((k) => `“${k}”`).join(', ')}. Try a broader keyword, like a field instead of a job title.`, h`<a class="btn btn-primary" href="#/profile">Edit keywords</a><button type="button" class="btn btn-outline" data-action="refresh">${icon('refresh')}Search again</button>`);
   }
   return h`${head}<div class="container page-body">${body}</div>`;
@@ -344,7 +366,7 @@ export function detail(ctx, j) {
       <p class="detail-loc">${icon('pin')}<span>${locLine(j)}</span></p>
       <dl class="facts">
         <div><dt>Pay</dt><dd>${j.salary ? txt(j.salary) : 'Not listed'}</dd></div>
-        <div><dt>Job type</dt><dd>${j.scheduleType ? txt(j.scheduleType) : 'Not listed'}</dd></div>
+        <div><dt>Job type</dt><dd>${jobTypeText(j) ? txt(jobTypeText(j)) : 'Not listed'}</dd></div>
         <div><dt>Experience</dt><dd>${j.kind === 'internship' ? 'Internship' : 'None needed'}</dd></div>
         <div><dt>Posted</dt><dd>${j.postedAt ? txt(j.postedAt) : 'Not listed'}</dd></div>
       </dl></header>

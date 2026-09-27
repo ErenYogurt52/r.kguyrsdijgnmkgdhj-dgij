@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalize, checkEligibility, checkLocation, requiredYears, runSearch, queriesFor, cleanKeywords, dedupeKey, skillHits } from '../server/jobs.js';
+import { normalize, checkEligibility, checkLocation, requiredYears, runSearch, queriesFor, cleanKeywords, dedupeKey, skillHits, jobTypesOf } from '../server/jobs.js';
 import { fold } from '../public/js/reference.js';
 import { MARKETING_P1, MARKETING_P2, mockRoutes } from './fixtures/google-jobs.js';
 
@@ -132,4 +132,41 @@ test('HTML job descriptions become plain text (tags removed, line breaks and hea
   assert.equal(htmlToText('&lt;p&gt;Escaped&lt;/p&gt; &#39;x&#39;'), "Escaped\n'x'");
   assert.equal(htmlToText('<ul><li>One</li><li>Two</li></ul>'), '- One\n- Two');
   assert.equal(htmlToText('<script>alert(1)</script>Hi'), 'Hi');
+});
+
+test('job type: schedule first, then the description; "become full-time later" does not count', () => {
+  const j = (o) => ({ title: 'Marketing Intern', scheduleType: null, extensions: [], description: '', highlights: [], ...o });
+  assert.deepEqual(jobTypesOf(j({ scheduleType: 'Part-time' })), ['parttime']);
+  assert.deepEqual(jobTypesOf(j({ scheduleType: 'Full-time', description: 'Part-time also possible' })), ['fulltime']);
+  assert.deepEqual(jobTypesOf(j({ extensions: ['Full–time and Part-time'] })).sort(), ['fulltime', 'parttime']);
+  assert.deepEqual(jobTypesOf(j({ scheduleType: 'Toàn thời gian' })), ['fulltime']);
+  assert.deepEqual(jobTypesOf(j({ scheduleType: 'Internship', description: 'Làm việc bán thời gian, 4 buổi/tuần.' })), ['parttime']);
+  assert.deepEqual(jobTypesOf(j({ scheduleType: 'Internship', description: 'Cơ hội trở thành nhân viên full-time sau thực tập.' })), []);
+  assert.deepEqual(jobTypesOf(j({ scheduleType: 'Internship', description: 'This is a full-time internship.' })), ['fulltime']);
+  assert.deepEqual(jobTypesOf(j({ description: 'An excellent full-time role.' })), ['fulltime']);
+  assert.deepEqual(jobTypesOf(j({ scheduleType: 'Internship' })), []);
+  assert.deepEqual(normalize({ title: 'Barista', detected_extensions: { schedule: 'Part-time' } }).jobTypes, ['parttime']);
+});
+
+test('runSearch with a job type asks for it and keeps only listings that say it', async () => {
+  const log = [];
+  const mk = (title, schedule, description = '') => ({ title, company_name: title + ' Co', location: 'Quận 1, Hồ Chí Minh', extensions: [schedule], detected_extensions: { schedule }, description });
+  const routes = { 'Marketing intern part time': { jobs: [
+    mk('Marketing Intern', 'Part-time'),
+    mk('Social Media Intern', 'Full-time'),
+    mk('Content Intern', 'Internship', 'Làm bán thời gian, 20 giờ/tuần.'),
+    mk('Brand Intern', 'Internship'),
+  ] } };
+  const out = await runSearch({ keywords: ['Marketing'], profile: { skills: [], areas: [], modes: [], jobType: 'parttime' }, serp: fakeSerp(routes, log), limit: 10, maxCalls: 1 });
+  assert.equal(log[0], 'Marketing intern part time');
+  assert.deepEqual(out.jobs.map((x) => x.title).sort(), ['Content Intern', 'Marketing Intern']);
+  assert.equal(out.meta.stats.removed.jobType, 2);
+  assert.equal(out.meta.jobType, 'parttime');
+  assert.ok(out.jobs.every((x) => x.reasons.includes('Part-time')));
+  const vi = [];
+  await runSearch({ keywords: ['Kế toán'], profile: { jobType: 'fulltime' }, serp: fakeSerp({}, vi), maxCalls: 1 });
+  assert.equal(vi[0], 'thực tập sinh Kế toán toàn thời gian');
+  const any = [];
+  await runSearch({ keywords: ['Marketing'], profile: { jobType: 'any' }, serp: fakeSerp({}, any), maxCalls: 1 });
+  assert.equal(any[0], 'Marketing intern');
 });

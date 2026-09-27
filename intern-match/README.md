@@ -163,6 +163,7 @@ Muốn đổi mô hình: chạy `ollama pull <tên>`, sửa `OLLAMA_MODEL=<tên>
 - **Đăng ký và đăng nhập:** bằng email/mật khẩu hoặc tài khoản Google. Có quên mật khẩu (gửi email đặt lại) và email xác minh.
 - **Onboarding:** lần đầu đăng nhập sẽ vào trang *Set up your profile*. Phải có ít nhất 1 từ khóa mới xem được Top 10.
 - **Top 10:** dựa trên hồ sơ. Có thể tìm thêm bằng từ khóa khác. Mỗi tin có nút **Apply on <trang gốc>**, mở tab mới tới website đăng tin.
+- **Lọc Full-time / Part-time:** chọn ở trang Top 10 (hàng *Job type* dưới ô tìm kiếm) hoặc trong Profile. Lựa chọn được lưu vào hồ sơ. Khi chọn Full-time hoặc Part-time, web thêm "full time" / "part time" (hoặc "toàn thời gian" / "bán thời gian") vào câu tìm kiếm và chỉ giữ tin ghi rõ loại đó (trong lịch làm việc Google hiển thị hoặc trong mô tả).
 - **Lưu tin:** lưu vào Firestore, nên xem được trên mọi thiết bị.
 - **Trang Profile:** sửa hồ sơ, đổi tên, đổi mật khẩu, đăng xuất, **xoá tài khoản**. Xoá tài khoản sẽ xoá hồ sơ, tin đã lưu và kết quả, rồi xoá tài khoản đăng nhập.
 

@@ -9,7 +9,7 @@ import { createSearchApi, SearchApiError } from './searchapi.js';
 import { createCache, createDailyLimit } from './cache.js';
 import { runSearch, cleanKeywords } from './jobs.js';
 import { createCoachChain, CoachError, cleanChat, cleanContext, systemPrompt } from './coach.js';
-import { AREAS, MODES, SKILL_NAMES } from '../public/js/reference.js';
+import { AREAS, MODES, JOB_TYPES, SKILL_NAMES } from '../public/js/reference.js';
 import { join } from 'node:path';
 
 const pickProfile = (p) => {
@@ -19,6 +19,7 @@ const pickProfile = (p) => {
     skills: arr(o.skills, null, 30).map((s) => s.slice(0, 60)).filter((s) => SKILL_NAMES.includes(s) || s.length <= 40),
     areas: arr(o.areas, AREAS.map((a) => a.id), 30),
     modes: arr(o.modes, MODES.map((m) => m[0]), 3),
+    jobType: JOB_TYPES.some(([id]) => id === o.jobType) ? o.jobType : 'any',
   };
 };
 

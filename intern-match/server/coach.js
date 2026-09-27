@@ -4,7 +4,7 @@
 //   - or OpenRouter (OPENROUTER_API_KEY, default google/gemma-4-26b-a4b-it:free)
 // The system prompt is built here on the server; the browser only sends the chat, the
 // student's profile and the listings they can see, all trimmed to safe sizes.
-import { MAJORS, AREAS, UNIVERSITIES, YEARS, MODES } from '../public/js/reference.js';
+import { MAJORS, AREAS, UNIVERSITIES, YEARS, MODES, JOB_TYPES } from '../public/js/reference.js';
 
 export class CoachError extends Error {
   constructor(message, status, code = 'coach_failed', retryable = false) { super(message); this.name = 'CoachError'; this.status = status; this.code = code; this.retryable = retryable; }
@@ -29,7 +29,7 @@ export function cleanContext(body) {
   const profile = {
     name: str(body && body.name, 60),
     university: str(p.university, 20), major: str(p.major, 30), year: str(p.year, 10),
-    keywords: list(p.keywords, 8, 60), skills: list(p.skills, 30, 60), areas: list(p.areas, 30, 20), modes: list(p.modes, 3, 10),
+    keywords: list(p.keywords, 8, 60), skills: list(p.skills, 30, 60), areas: list(p.areas, 30, 20), modes: list(p.modes, 3, 10), jobType: str(p.jobType, 10),
   };
   const jobs = (Array.isArray(body && body.jobs) ? body.jobs : []).slice(0, 12).map((j, i) => ({
     n: i + 1,
@@ -68,6 +68,7 @@ export function systemPrompt({ profile, jobs, focus }) {
     `- Skills: ${profile.skills.join(', ') || 'not given'}`,
     `- Preferred areas: ${areas.join(', ') || 'any'}`,
     `- Working mode: ${profile.modes.map((m) => label(MODES, m)).join(', ') || 'any'}`,
+    `- Job type: ${profile.jobType && profile.jobType !== 'any' ? label(JOB_TYPES, profile.jobType) : 'any'}`,
     '',
     jobs.length ? `The student's current top ${jobs.length} listings (Ho Chi Minh City):` : 'The student has no listings loaded yet. Suggest they open their Top 10 first if they ask about specific jobs.',
     ...jobs.map((j) => `${j.n}. ${j.title} — ${j.company} | ${j.location || 'Ho Chi Minh City'} | ${j.kind}${j.schedule ? ` | ${j.schedule}` : ''}${j.salary ? ` | Pay: ${j.salary}` : ''}${j.posted ? ` | Posted ${j.posted}` : ''}${j.via ? ` | via ${j.via}` : ''}${j.summary ? `\n   Details: ${j.summary}` : ''}`),
