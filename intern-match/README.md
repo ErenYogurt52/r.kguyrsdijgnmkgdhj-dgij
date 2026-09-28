@@ -255,3 +255,16 @@ Code đã có sẵn `netlify.toml` và `netlify/functions/api.mjs`. Netlify ph�
 Muốn cập nhật code sau này: sửa code rồi chạy lại `npx netlify-cli deploy --prod`. Nếu site bị lỗi, xem log ở **Netlify → Logs → Functions → api**.
 
 Không dùng được "Netlify Drop" (kéo thả thư mục), vì cách đó chỉ đưa lên file tĩnh, không chạy được phần API.
+
+## 10. Đưa lên mạng bằng Vercel
+
+Code đã có sẵn cấu hình cho Vercel: `vercel.json`, thư mục `api/` (mỗi file là một Vercel Function, dùng chung `server/vercel.js`) và web tĩnh trong `public/`. Không cần bước build.
+
+1. Đẩy code lên GitHub (`git push`).
+2. Vào [vercel.com](https://vercel.com), đăng nhập bằng GitHub (gói **Hobby** miễn phí) → **Add New… → Project** → chọn repo → **Import**.
+3. **Root Directory:** bấm **Edit** và chọn `intern-match` (thư mục có `vercel.json`). **Framework Preset:** Other. Các ô Build/Output để nguyên.
+4. **Environment Variables:** dán toàn bộ nội dung file `.env` vào ô *Key* đầu tiên, Vercel tự tách thành từng biến (FIREBASE_*, SEARCHAPI_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY…). Bấm **Deploy**.
+5. Firebase Console → **Authentication → Settings → Authorized domains → Add domain**: thêm tên miền Vercel (ví dụ `ten-project.vercel.app`), nếu không thì đăng nhập bằng Google sẽ báo lỗi.
+6. Từ đó, mỗi lần `git push`, Vercel tự deploy lại. Đổi tên miền: **Project → Settings → Domains**.
+
+Ghi chú: trên Vercel, coach dùng Gemini (dự phòng OpenRouter), Ollama bị bỏ qua. Cache và bộ đếm lượt/ngày chỉ là tạm thời như trên Netlify.

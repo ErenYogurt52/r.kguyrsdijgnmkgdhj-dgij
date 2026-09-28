@@ -9,3 +9,6 @@ node_modules/
 
 # Coach mascot image (kept private, not committed)
 public/img/coach.png
+
+# Vercel
+.vercel/
