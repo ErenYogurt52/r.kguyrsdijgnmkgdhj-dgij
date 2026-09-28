@@ -73,7 +73,7 @@ export function Footer(ctx) {
       <div><h2 class="footer-h">Listings</h2><p class="footer-note">Each listing links to the website that posted it.</p></div>
       <div><h2 class="footer-h">Your data</h2><p class="footer-note">Your account, profile and saved list are stored in Firebase. Intern Match never asks for your CV.</p></div>
     </div>
-    <div class="footer-base">   <span>© Nhom 6 STKN</span><span>Built for university students in Ho Chi Minh City</span></div>
+    <div class="footer-base">   <span>© InternMatch by Nhom 6 STKN</span><span>Built for university students in Ho Chi Minh City</span></div>
   </div>`;
 }
 
