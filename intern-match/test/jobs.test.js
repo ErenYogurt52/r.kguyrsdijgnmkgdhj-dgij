@@ -212,3 +212,17 @@ test('free time only nudges the order (+1 at most) and shows a reason; nothing i
   assert.equal(d.score, b.score, 'other times do not count');
   assert.equal(relevance(entry(['weekend']), {}, ['Marketing']).score, b.score, 'no free time chosen: no change');
 });
+
+test('listings that ask for money are left out (copies too); scam signs move a listing down with a warning', async () => {
+  const routes = { 'Marketing intern': { jobs: [
+    { title: 'Marketing Intern', company_name: 'Real Co', location: 'Hồ Chí Minh', description: 'Viết content cho fanpage.' },
+    { title: 'Marketing Intern', company_name: 'Scam Co', location: 'Hồ Chí Minh', description: 'Ứng viên đóng phí hồ sơ 200k.' },
+    { title: 'Thực tập sinh Marketing online', company_name: 'Easy Co', location: 'Hồ Chí Minh', description: 'Việc nhẹ lương cao, chỉ cần điện thoại.' },
+    { title: 'Marketing Intern', company_name: 'Scam Co', location: 'Hồ Chí Minh', via: 'qua LinkedIn', description: 'Viết content.' },
+  ] } };
+  const out = await runSearch({ keywords: ['Marketing'], serp: fakeSerp(routes), maxCalls: 1 });
+  assert.deepEqual(out.jobs.map((j) => j.company), ['Real Co', 'Easy Co']);
+  assert.equal(out.meta.stats.removed.scam, 1, 'counted once, and its copy on another site is left out too');
+  assert.deepEqual(out.jobs[1].warnings, ['easy', 'phone']);
+  assert.deepEqual(out.jobs[0].warnings, []);
+});

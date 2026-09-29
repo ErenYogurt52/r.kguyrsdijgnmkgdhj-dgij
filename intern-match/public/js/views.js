@@ -2,6 +2,8 @@
 import { h, raw, esc } from './html.js';
 import { icon, Logo, HERO_ART } from './icons.js';
 import { htmlToText } from './text.js';
+import { getLang } from './i18n.js';
+import { trustOf, WARNING_TEXT } from './trust.js';
 import { MAJORS, MAJOR_KEYWORDS, MAJOR_SKILLS, SKILL_NAMES, UNIVERSITIES, AREAS, MODES, YEARS, JOB_TYPES, FREE_TIMES, fold } from './reference.js';
 
 const VI_RE = /[ăâđêôơưàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]/i;
@@ -36,6 +38,7 @@ const locLine = (j) => {
 const ext = (href, cls, label, content) => h`<a class="${cls}" href="${href}" target="_blank" rel="noopener noreferrer" aria-label="${label} (opens in a new tab)">${content}</a>`;
 
 /* ---------------- Chrome ---------------- */
+export const LangSwitch = (extra = '') => h`<div class="lang-switch${extra}" role="group" aria-label="Language" translate="no">${[['en', 'EN', 'English'], ['vi', 'VI', 'Tiếng Việt']].map(([v, l, name]) => h`<button type="button" data-action="lang" data-lang="${v}" lang="${v}" title="${name}" aria-label="${name}" aria-pressed="${getLang() === v ? 'true' : 'false'}" data-fk="lang-${v}${extra ? '-m' : ''}">${l}</button>`)}</div>`;
 export function Header(route, ctx) {
   const n = ctx.savedCount;
   const nav = ctx.user
@@ -45,9 +48,9 @@ export function Header(route, ctx) {
   return h`<div class="container header-row">
     <a class="brand" href="#/">${Logo()}<span>Intern Match</span></a>
     <nav class="main-nav" aria-label="Main"><ul>${nav.map(([k, href, label]) => h`<li><a href="${href}"${cur(k) ? raw(' aria-current="page"') : ''}>${label}${k === 'saved' && n ? h`<span class="nav-count"><span class="sr-only">, </span>${n}<span class="sr-only"> saved</span></span>` : ''}</a></li>`)}</ul></nav>
-    <div class="header-actions">${ctx.user
+    <div class="header-actions">${LangSwitch()}${ctx.user
       ? h`<a class="btn btn-outline btn-sm header-profile" href="#/profile" aria-label="Your profile"${route.name === 'profile' ? raw(' aria-current="page"') : ''}>${icon('user')}<span>${ctx.user.name ? ctx.user.name.split(' ').slice(-1)[0] : 'Your profile'}</span></a>`
-      : h`<a class="btn btn-sm header-login" href="#/login">Log in</a><a class="btn btn-primary btn-sm" href="#/signup">Sign up</a>`}
+      : h`<a class="btn btn-sm header-login" href="#/login">Log in</a><a class="btn btn-primary btn-sm header-signup" href="#/signup">Sign up</a>`}
       <button class="icon-btn menu-btn" type="button" data-action="menu-open" aria-label="Open menu" aria-expanded="${ctx.menu ? 'true' : 'false'}" aria-controls="mobile-menu" data-fk="menu-btn">${icon('menu')}</button>
     </div>
   </div>`;
@@ -58,6 +61,7 @@ export function MobileMenu(route, ctx) {
     ? [['#/', 'Home', 'home'], ['#/top', 'Top 10', 'top'], ['#/coach', 'Career coach', 'coach'], ['#/saved', 'Saved', 'saved'], ['#/profile', 'Your profile', 'profile'], ['#/how-it-works', 'How it works', 'how']]
     : [['#/', 'Home', 'home'], ['#/how-it-works', 'How it works', 'how'], ['#/login', 'Log in', 'login'], ['#/signup', 'Sign up', 'signup']];
   return h`<div class="container mm-head"><a class="brand" href="#/">${Logo()}<span>Intern Match</span></a><button class="icon-btn" type="button" data-action="menu-close" aria-label="Close menu" data-fk="menu-close">${icon('close')}</button></div>
+  <div class="container">${LangSwitch(' lang-switch-m')}</div>
   <nav class="container mm-nav" aria-label="Menu"><ol>${links.map(([href, label, k], i) => h`<li><a href="${href}"${route.name === k ? raw(' aria-current="page"') : ''}><span class="mm-num" aria-hidden="true">${pad(i + 1)}</span>${label}</a></li>`)}</ol>
   ${ctx.user ? h`<p class="mm-soon">Signed in as ${ctx.user.email}. <button type="button" class="link-btn mm-signout" data-action="signout">Sign out</button></p>` : ''}</nav>`;
 }
@@ -91,15 +95,30 @@ export function SearchForm(q, variant, placeholder = 'Search by role or field, e
 function shortfall(n, meta, jt) {
   const st = meta.stats || {}, rm = st.removed || {};
   const seen = st.seen || 0;
+  if (getLang() === 'vi') return shortfallVi(n, seen, rm, jt);
   const head = n ? `Only ${n} ${n === 1 ? 'job fits' : 'jobs fit'} right now.` : '';
   if (!seen) return `${head} No listings came back for these keywords. Try a broader keyword, like a field instead of a job title.`.trim();
   const parts = [];
   const exp = (rm.experience || 0) + (rm.senior || 0);
   if (jt !== 'any' && rm.jobType) parts.push(`${rm.jobType} didn’t say they’re ${typeName(jt).toLowerCase()}`);
   if (exp) parts.push(`${exp} asked for experience or were senior roles`);
+  if (rm.scam) parts.push(`${rm.scam} asked for a deposit or a fee`);
   if ((rm.location || 0) + (rm.abroad || 0)) parts.push(`${(rm.location || 0) + (rm.abroad || 0)} were outside Ho Chi Minh City`);
   const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
   return `${head} We checked ${seen} ${seen === 1 ? 'listing' : 'listings'}${list ? `: ${list}.` : ' for these keywords.'}`.trim();
+}
+function shortfallVi(n, seen, rm, jt) {
+  const head = n ? `Hiện chỉ có ${n} việc phù hợp.` : '';
+  if (!seen) return `${head} Không có tin nào cho các từ khóa này. Hãy thử từ khóa rộng hơn, ví dụ tên lĩnh vực thay vì chức danh.`.trim();
+  const parts = [];
+  const exp = (rm.experience || 0) + (rm.senior || 0);
+  const away = (rm.location || 0) + (rm.abroad || 0);
+  if (jt !== 'any' && rm.jobType) parts.push(`${rm.jobType} tin không ghi là ${jt === 'parttime' ? 'bán thời gian' : 'toàn thời gian'}`);
+  if (exp) parts.push(`${exp} tin yêu cầu kinh nghiệm hoặc là vị trí cấp cao`);
+  if (rm.scam) parts.push(`${rm.scam} tin đòi đặt cọc hoặc đóng phí`);
+  if (away) parts.push(`${away} tin ở ngoài TP. Hồ Chí Minh`);
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} và ${parts[parts.length - 1]}` : parts[0];
+  return `${head} Chúng tôi đã xem ${seen} tin${list ? `: ${list}.` : ' cho các từ khóa này.'}`.trim();
 }
 
 // Full-time / part-time filter shown under the search bar on the Top 10 page.
@@ -120,11 +139,12 @@ export function JobCard(j, ctx, opts = {}) {
   const target = applyTarget(j);
   return h`<article class="job-card" aria-labelledby="${tid}">
     <div class="jc-top">${SourceBadge(j)}${opts.rank ? h`<span class="jc-rank" aria-label="Number ${opts.rank}">${pad(opts.rank)}</span>` : ''}</div>
-    <div><h3 class="jc-title" id="${tid}"><a href="#/internships/${j.id}" data-fk="card-${p}-${j.id}">${txt(j.title)}</a></h3><p class="jc-company">${txt(j.company)}</p></div>
+    <div><h3 class="jc-title" translate="no" id="${tid}"><a href="#/internships/${j.id}" data-fk="card-${p}-${j.id}">${txt(j.title)}</a></h3><p class="jc-company" translate="no">${txt(j.company)}</p></div>
     ${j.salary ? h`<p class="jc-salary">${txt(j.salary)}</p>` : ''}
     <p class="jc-loc">${icon('pin')}<span>${locLine(j)}</span></p>
     <ul class="tags" aria-label="Details"><li class="tag tag-kind">${kindLabel(j)}</li>${jobTypeTags(j).map((t) => h`<li class="tag">${txt(t)}</li>`)}</ul>
     ${j.reasons && j.reasons.length ? h`<p class="jc-reason">${icon('sparkle')}<span>${txt(j.reasons.slice(0, 2).join(' · '))}</span></p>` : ''}
+    ${Caution(j)}
     <div class="jc-dates"><span>${j.postedAt ? h`Posted ${txt(j.postedAt)}` : 'Posting date not listed'}</span>${opts.savedAt ? h`<span>Saved ${ago(opts.savedAt)}</span>` : ''}</div>
     <div class="jc-actions">${target
       ? ext(target.link, 'btn btn-primary btn-card', `Apply on ${target.title}: ${j.title}, ${j.company}`, h`Apply on ${txt(target.title)} ${icon('external')}`)
@@ -132,6 +152,12 @@ export function JobCard(j, ctx, opts = {}) {
       ${SaveButton(j, ctx, 'card', p)}</div>
   </article>`;
 }
+
+// Signs of a fake job ad (public/js/trust.js), on the card and at the top of the job page.
+const Caution = (j) => {
+  const w = trustOf(j).warnings;
+  return w.length ? h`<p class="jc-warn">${icon('alert')}<span><strong>Be careful:</strong> ${w.slice(0, 2).map((id) => WARNING_TEXT[id]).join(' · ')}</span></p>` : '';
+};
 
 const Grid = (jobs, ctx, opts = {}) => h`<ol class="card-grid${opts.ranked ? ' is-ranked' : ''}">${jobs.map((j, i) => h`<li>${JobCard(j, ctx, { ...opts, rank: opts.ranked ? i + 1 : 0, savedAt: opts.savedAt && opts.savedAt(j) })}</li>`)}</ol>`;
 export const SkeletonGrid = (n = 6) => h`<ul class="card-grid" aria-hidden="true">${Array.from({ length: n }, () => h`<li><div class="job-card skel"><div class="sk sk-badge"></div><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-line short"></div><div class="sk sk-tags"></div><div class="sk sk-btn"></div></div></li>`)}</ul>`;
@@ -156,11 +182,11 @@ export function home(ctx) {
       <h1 id="hero-title" class="display">Find the right internship for your future.</h1>
       <p class="hero-sub">Tell us what you study and what you’re looking for. We show your 10 best internships and no-experience jobs in Ho Chi Minh City.</p>
       ${ctx.user
-        ? h`${SearchForm('', 'hero')}${kws.length ? h`<div class="quick quick-hero" role="group" aria-label="Your keywords">${kws.map((k) => h`<a class="chip" href="#/top?q=${encodeURIComponent(k)}">${txt(k)}</a>`)}<a class="chip chip-strong" href="#/top">${icon('sparkle', 'chip-ic')}See your top 10</a></div>` : ''}`
+        ? h`${SearchForm('', 'hero')}${kws.length ? h`<div class="quick quick-hero" translate="no" role="group" aria-label="Your keywords">${kws.map((k) => h`<a class="chip" href="#/top?q=${encodeURIComponent(k)}">${txt(k)}</a>`)}<a class="chip chip-strong" href="#/top">${icon('sparkle', 'chip-ic')}See your top 10</a></div>` : ''}`
         : h`<div class="hero-cta"><a class="btn btn-primary search-btn" href="#/signup">Create a free account ${icon('arrow')}</a><a class="btn btn-ghost-dark search-btn" href="#/login">Log in</a></div>`}
     </div></section>
   <section class="section" aria-labelledby="how-title"><div class="container how-grid">
-    <div class="how-panel grain"><p class="how-big">Unlock your potential<br>right now.</p><p class="how-cap">Internships and no-experience roles in Ho Chi Minh City, picked for your major and skills.</p></div>
+    <div class="how-panel grain"><p class="how-big">Everyone starts somewhere.<br>Start here.</p><p class="how-cap">Internships and no-experience roles in Ho Chi Minh City, picked for your major and skills.</p></div>
     <div><p class="eyebrow">How it works</p><h2 id="how-title" class="h-section">How Intern Match works.</h2>
       <ol class="steps">${STEPS.map(([t, d], i) => h`<li><span class="step-n" aria-hidden="true">${pad(i + 1)}</span><h3 class="step-t">${t}</h3><p class="step-d">${d}</p></li>`)}</ol>
       <a class="link-arrow" href="#/how-it-works">What we keep and remove ${icon('arrow')}</a></div>
@@ -192,9 +218,11 @@ export function how() {
       <li>Jobs asking for months or years of experience. Experience that’s only “a plus” doesn’t count against a job.</li>
       <li>Senior, lead and manager roles.</li>
       <li>Jobs in other provinces, and overseas labour programmes.</li>
-      <li>The same job posted on several sites. We keep one and list every site you can apply on.</li></ul></div></section>
+      <li>The same job posted on several sites. We keep one and list every site you can apply on.</li>
+      <li>Listings that ask you to pay a deposit, a fee or a top-up to get the job. This is a common scam.</li></ul></div></section>
     <section><h2 class="h2">How the top 10 is ordered</h2><p>A listing ranks higher when its title matches one of your keywords, when it mentions skills you have, when it’s in one of your preferred areas, and when it mentions the times you’re free (or flexible hours). We show the reasons on each card rather than a score.</p></section>
     <section><h2 class="h2">Full-time or part-time</h2><p>Pick a job type on your Top 10 page or in your profile. With Full-time or Part-time, we search for that type and only show listings that say they are full-time or part-time. Many listings don’t say, so choose Any to see everything.</p></section>
+    <section><h2 class="h2">Trust signals</h2><p>Each job page shows how many sites posted the listing, whether it’s on a well-known job site or the company’s own website, and a warning when the text has common signs of a fake job ad, such as easy work for high pay, “you only need a phone” or contact on Telegram. Listings with a warning move down your list. These are signals, not a check of the company: you can look the company up on the National Business Registration Portal, and you should never pay to get a job.</p></section>
     <section><h2 class="h2">Career coach</h2><p>The coach is an AI assistant. It reads your profile and your top 10 to suggest where to apply first, which skills to build, and to help with CV lines and interview practice. It only talks about listings you can see and can still make mistakes, so check details on the original website.</p></section>
     <section><h2 class="h2">Your data</h2><p>Your account, profile, latest results and saved list are stored in your Firebase account and only you can read them. Intern Match never takes applications or CVs.</p></section>
   </div>`;
@@ -253,12 +281,12 @@ const Checks = (name, legend, opts, values) => h`<fieldset class="field"><legend
 function ChipInput(list, label, values, placeholder, suggestions, hint, error) {
   const id = `pf-${list}`;
   return h`<div class="field"><label for="${id}">${label}</label>
-    <div class="chip-input${error ? ' is-invalid' : ''}">${values.map((s) => h`<span class="skill-chip">${txt(s)}<button type="button" data-action="chip-remove" data-list="${list}" data-value="${s}" aria-label="Remove ${s}" data-fk="rm-${list}-${s}">${icon('close')}</button></span>`)}
+    <div class="chip-input${error ? ' is-invalid' : ''}">${values.map((s) => h`<span class="skill-chip" translate="no">${txt(s)}<button type="button" data-action="chip-remove" data-list="${list}" data-value="${s}" aria-label="Remove ${s}" data-fk="rm-${list}-${s}">${icon('close')}</button></span>`)}
       <input id="${id}" type="text" ${list === 'skills' ? raw('list="skill-options"') : ''} placeholder="${values.length ? 'Add another' : placeholder}" data-keydown="chip" data-list="${list}" data-fk="${id}" autocomplete="off" maxlength="60" aria-describedby="${id}-hint${error ? ` ${id}-err` : ''}"${error ? raw(' aria-invalid="true"') : ''}>
       <button type="button" class="btn btn-outline btn-sm" data-action="chip-add" data-list="${list}" data-fk="${id}-add">Add</button></div>
     ${error ? h`<p class="form-error" id="${id}-err">${error}</p>` : ''}
     <p class="hint" id="${id}-hint">${hint}</p>
-    ${suggestions.length ? h`<div class="suggest">${suggestions.map((s) => h`<button type="button" class="sug" data-action="chip-add" data-list="${list}" data-value="${s}" data-fk="sug-${list}-${s}">+ ${txt(s)}</button>`)}</div>` : ''}</div>`;
+    ${suggestions.length ? h`<div class="suggest" translate="no">${suggestions.map((s) => h`<button type="button" class="sug" data-action="chip-add" data-list="${list}" data-value="${s}" data-fk="sug-${list}-${s}">+ ${txt(s)}</button>`)}</div>` : ''}</div>`;
 }
 
 export function ProfileForm(d, ctx, mode) {
@@ -292,7 +320,7 @@ export function ProfileForm(d, ctx, mode) {
       <div class="meter meter-4" aria-hidden="true">${parts.map((f) => h`<span${f[1] ? raw(' class="on"') : ''}></span>`)}</div>
       <ul class="factor-list">${parts.map(([n, ok]) => h`<li class="${ok ? 'is-set' : ''}">${icon(ok ? 'check' : 'minus')}<span>${n}</span><span class="sr-only">${ok ? ': set' : ': not set'}</span></li>`)}</ul>
       <div class="pf-preview">${used.length
-        ? h`<p class="hint">We’ll search for:</p><ul class="q-list">${used.map((k) => h`<li>${txt(`“${queryFor(k)}”`)}</li>`)}</ul><p class="hint">Only internships or jobs asking for no experience, in Ho Chi Minh City.</p>`
+        ? h`<p class="hint">We’ll search for:</p><ul class="q-list" translate="no">${used.map((k) => h`<li>${txt(`“${queryFor(k)}”`)}</li>`)}</ul><p class="hint">Only internships or jobs asking for no experience, in Ho Chi Minh City.</p>`
         : h`<p class="hint">Add at least one keyword to see your top 10.</p>`}</div></aside>
   </div>`;
 }
@@ -343,7 +371,7 @@ export function top(ctx, route, s) {
     <p class="lead">Internships and jobs that need no experience, in Ho Chi Minh City.</p>
     <div class="rec-summary">${q
       ? h`<a class="link-arrow" href="#/top">${icon('arrow', 'flip')}Back to your top 10</a>`
-      : h`<span class="muted">Your keywords:</span>${kws.map((k) => h`<span class="af-locked">${txt(k)}</span>`)}<a class="link-btn" href="#/profile">Edit keywords</a>`}</div>
+      : h`<span class="muted">Your keywords:</span>${kws.map((k) => h`<span class="af-locked" translate="no">${txt(k)}</span>`)}<a class="link-btn" href="#/profile">Edit keywords</a>`}</div>
     ${SearchForm(q || '', 'page', 'Try other keywords')}
     ${JobTypeFilter(ctx)}</div>`;
   let body;
@@ -380,9 +408,10 @@ export function detail(ctx, j) {
   return h`<div class="container"><nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="#/top">Top 10</a></li><li aria-current="page">${txt(j.title)}</li></ol></nav></div>
   <div class="container detail has-bar">
     <header class="detail-head"><div class="detail-tags">${SourceBadge(j)}<span class="tag tag-kind">${kindLabel(j)}</span></div>
-      <h1 class="page-title detail-title" tabindex="-1">${txt(j.title)}</h1>
-      <p class="detail-company">${icon('building')}<span>${txt(j.company)}</span></p>
+      <h1 class="page-title detail-title" translate="no" tabindex="-1">${txt(j.title)}</h1>
+      <p class="detail-company" translate="no">${icon('building')}<span>${txt(j.company)}</span></p>
       <p class="detail-loc">${icon('pin')}<span>${locLine(j)}</span></p>
+      ${Caution(j)}
       <dl class="facts">
         <div><dt>Pay</dt><dd>${j.salary ? txt(j.salary) : 'Not listed'}</dd></div>
         <div><dt>Job type</dt><dd>${jobTypeText(j) ? txt(jobTypeText(j)) : 'Not listed'}</dd></div>
@@ -398,13 +427,33 @@ export function detail(ctx, j) {
       ${j.reasons && j.reasons.length ? h`<section class="match-panel" aria-labelledby="why-t"><h2 class="mp-title" id="why-t">Why it’s on your list</h2><ul class="ticks why">${[j.kindReason, ...j.reasons].filter(Boolean).map((r) => h`<li>${txt(r)}</li>`)}</ul></section>` : ''}
     </aside>
     <div class="detail-body">
-      ${j.highlights.map((hl) => h`<section><h2 class="h2">${txt(htmlToText(hl.title))}</h2><ul class="ticks">${hl.items.map((i) => h`<li>${txt(htmlToText(i))}</li>`)}</ul></section>`)}
-      ${paras.length ? h`<section><h2 class="h2">Full description</h2><div class="desc">${paras.map((p) => (p.startsWith('## ') ? h`<h3 class="desc-h">${txt(p.slice(3))}</h3>` : h`<p>${txt(p)}</p>`))}</div></section>` : ''}
+      ${TrustSection(j)}
+      ${j.highlights.map((hl) => h`<section><h2 class="h2">${txt(htmlToText(hl.title))}</h2><ul class="ticks" translate="no">${hl.items.map((i) => h`<li>${txt(htmlToText(i))}</li>`)}</ul></section>`)}
+      ${paras.length ? h`<section><h2 class="h2">Full description</h2><div class="desc" translate="no">${paras.map((p) => (p.startsWith('## ') ? h`<h3 class="desc-h">${txt(p.slice(3))}</h3>` : h`<p>${txt(p)}</p>`))}</div></section>` : ''}
       <section><h2 class="h2">Source</h2><p>${j.via ? h`Listed via ${txt(j.via)}. ` : ''}The original website has the final word on details and deadlines.</p>
         ${j.shareLink ? h`<p>${ext(j.shareLink, 'link-arrow', 'View the original listing', h`View the original listing ${icon('external')}`)}</p>` : ''}</section>
     </div>
   </div>
   ${target ? h`<div class="apply-bar">${ext(target.link, 'btn btn-primary', `Apply on ${target.title}`, h`Apply on ${txt(target.title)} ${icon('external')}`)}${SaveButton(j, ctx, 'bar', 'b')}</div>` : ''}`;
+}
+
+// Where the listing is posted and what its text says. Signals only: Intern Match doesn't verify companies.
+const LOOKUP = 'https://dangkykinhdoanh.gov.vn/vn/Pages/Trangchu.aspx';
+function TrustSection(j) {
+  const { warnings, sources: s } = trustOf(j);
+  const items = [];
+  if (s.sites > 1) items.push(['ok', `Listed on ${s.sites} sites`]);
+  else if (s.sites === 1) items.push(['info', 'Listed on 1 site']);
+  if (s.boards.length) items.push(['ok', `On well-known job sites: ${s.boards.join(', ')}`]);
+  if (s.companySite) items.push(['ok', 'On the company’s own website']);
+  if (s.sites && !s.boards.length && !s.companySite) items.push(['info', `Not on a well-known job site (${s.others.slice(0, 3).join(', ')})`]);
+  return h`<section class="trust" aria-labelledby="trust-t"><h2 class="h2" id="trust-t">Trust signals</h2>
+    ${warnings.length ? h`<div class="trust-alert">${icon('alert')}<div><p class="trust-alert-t">Be careful with this listing</p><ul>${warnings.map((w) => h`<li>${WARNING_TEXT[w]}</li>`)}</ul><p>Never pay a deposit, a fee or a top-up to get a job. If they ask, stop and don’t send money.</p></div></div>` : ''}
+    ${items.length ? h`<ul class="trust-list">${items.map(([k, t]) => h`<li class="is-${k}">${icon(k === 'ok' ? 'check' : 'info')}<span>${txt(t)}</span></li>`)}</ul>` : ''}
+    <div class="trust-look"><p>Check that the company is registered: search for <strong translate="no">${txt(j.company)}</strong> on the National Business Registration Portal.</p>
+      ${ext(LOOKUP, 'btn btn-outline btn-sm', 'Look up the company', h`${icon('building')}Look up the company ${icon('external')}`)}</div>
+    <p class="fine">These are signals, not a check of the company. Intern Match doesn’t verify companies.</p>
+  </section>`;
 }
 
 /* ---------------- Saved ---------------- */
@@ -471,12 +520,12 @@ export function coach(ctx, c) {
   const name = ctx.user && ctx.user.name ? ctx.user.name.split(' ').slice(-1)[0] : '';
   return h`${head}<div class="container coach">
     <section class="coach-chat" aria-label="Conversation">
-      ${focus ? h`<p class="coach-focus">${icon('info')}<span>Talking about <strong>${txt(focus.title)}</strong>, ${txt(focus.company)}.</span><a class="link-btn" href="#/coach">Talk about my top 10 instead</a></p>` : ''}
+      ${focus ? h`<p class="coach-focus">${icon('info')}<span>Talking about <strong translate="no">${txt(focus.title)}</strong>, ${txt(focus.company)}.</span><a class="link-btn" href="#/coach">Talk about my top 10 instead</a></p>` : ''}
       <div class="coach-log" id="coach-log" aria-live="polite">
         <div class="msg msg-ai"><span class="msg-who" aria-hidden="true">${Avatar(ctx)}Coach</span><div class="msg-body"><p>Hi${name ? ` ${name}` : ''}! I’ve read your profile${ctx.topCount ? ` and your top ${ctx.topCount}` : ''}. Ask me anything about internships, or pick a question below.</p></div></div>
         ${msgs.map((m, i) => (m.role === 'user'
-          ? h`<div class="msg msg-user"><span class="sr-only">You said: </span><div class="msg-body">${txt(m.content)}</div></div>`
-          : h`<div class="msg msg-ai${m.pending ? ' is-pending' : ''}" data-msg="${i}"><span class="msg-who" aria-hidden="true">${Avatar(ctx)}Coach</span><span class="sr-only">Coach said: </span><div class="msg-body">${m.content ? raw(md(m.content)) : h`<span class="typing" aria-label="Coach is typing"><span></span><span></span><span></span></span>`}</div></div>`))}
+          ? h`<div class="msg msg-user"><span class="sr-only">You said: </span><div class="msg-body" translate="no">${txt(m.content)}</div></div>`
+          : h`<div class="msg msg-ai${m.pending ? ' is-pending' : ''}" data-msg="${i}"><span class="msg-who" aria-hidden="true">${Avatar(ctx)}Coach</span><span class="sr-only">Coach said: </span><div class="msg-body" translate="no">${m.content ? raw(md(m.content)) : h`<span class="typing" aria-label="Coach is typing"><span></span><span></span><span></span></span>`}</div></div>`))}
         ${c.error ? h`<div class="msg msg-error" role="alert"><div class="msg-body"><p>${c.error}</p><button type="button" class="btn btn-outline btn-sm" data-action="coach-retry" data-fk="coach-retry">${icon('refresh')}Try again</button></div></div>` : ''}
       </div>
       ${msgs.length ? '' : h`<div class="suggest coach-suggest">${coachSuggestions(focus).map((q, i) => h`<button type="button" class="sug" data-action="coach-suggest" data-q="${q}" data-fk="coach-sug-${i}">${txt(q)}</button>`)}</div>`}

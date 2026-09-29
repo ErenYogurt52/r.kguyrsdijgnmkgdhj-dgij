@@ -142,3 +142,39 @@ ol.card-grid{list-style:none}
 @media (max-width:640px){.jt-label{flex-basis:100%;margin:0}.jt-opt{flex:1;padding:0 10px}}
 .shortfall{margin:0 0 20px;padding:14px 16px;border-left:3px solid var(--accent);background:var(--surface);font-size:15px;color:var(--text-2);max-width:880px}
 .shortfall .link-btn{margin-left:6px}
+/* Language switch (EN / VI) */
+.lang-switch{display:inline-flex;border:1px solid var(--rule-2);margin-right:4px}
+.lang-switch button{min-width:36px;min-height:34px;padding:0 8px;border:0;background:transparent;color:var(--text-2);font-size:13px;font-weight:700;cursor:pointer}
+.lang-switch button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink)}
+.lang-switch button:hover{color:var(--text)}
+.lang-switch button[aria-pressed="true"]:hover{color:var(--chip-on-ink)}
+.lang-switch-m{margin:4px 0 16px}
+/* Phones: a smaller switch, the name on one line; Sign up (also in the menu and on the home page) and
+   the profile button (also in the menu) make room for it on the narrowest screens. */
+@media (max-width:600px){.header-row{gap:12px}.brand{white-space:nowrap}#site-header .lang-switch{margin-right:0}#site-header .lang-switch button{min-width:30px;min-height:32px;padding:0 6px;font-size:12px}}
+@media (max-width:440px){.header-signup{display:none}}
+@media (max-width:370px){.header-profile{display:none}}
+.is-over-hero .lang-switch{border-color:rgba(255,255,255,.35)}
+.is-over-hero .lang-switch button{color:rgba(255,255,255,.8)}
+.is-over-hero .lang-switch button[aria-pressed="true"]{background:#E8662B;color:#0E0B1F}
+
+/* Trust signals: warnings on cards and job pages, and the "Trust signals" section */
+.jc-warn{display:flex;gap:6px;align-items:flex-start;margin:0;font-size:13px;font-weight:600;color:var(--error)}
+.jc-warn .icon{width:16px;height:16px;margin-top:1px;flex:none}
+.jc-warn strong{font-weight:800}
+.detail-head .jc-warn{font-size:15px;margin:14px 0 0}
+.detail-head .jc-warn .icon{width:18px;height:18px}
+.trust{display:grid;gap:14px}
+.trust .h2{margin:0}
+.trust .fine{margin:0}
+.trust-alert{display:flex;gap:12px;align-items:flex-start;padding:16px;border-left:4px solid var(--error);background:var(--surface-2)}
+.trust-alert>.icon{width:22px;height:22px;color:var(--error);flex:none;margin-top:1px}
+.trust-alert-t{margin:0 0 6px;font-weight:800;color:var(--error)}
+.trust-alert ul{margin:0 0 8px;padding-left:18px}
+.trust-alert p:last-child{margin:0;font-size:14px}
+.trust-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.trust-list li{display:flex;gap:10px;align-items:flex-start}
+.trust-list .icon{width:18px;height:18px;flex:none;margin-top:2px}
+.trust-list .is-info{color:var(--text-2)}
+.trust-look{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:14px 16px;border:1px solid var(--rule);background:var(--surface)}
+.trust-look p{margin:0;flex:1 1 260px;font-size:14px}

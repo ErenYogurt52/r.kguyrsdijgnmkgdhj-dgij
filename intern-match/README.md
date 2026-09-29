@@ -92,6 +92,7 @@ Các lệnh khác:
 - Vị trí senior, trưởng nhóm, quản lý.
 - Tin ở tỉnh khác, hoặc tin xuất khẩu lao động / thực tập sinh đi Nhật.
 - Tin trùng giữa các trang: gộp thành một tin và giữ đủ link ứng tuyển.
+- Tin **đòi tiền để được nhận việc** (đặt cọc, phí hồ sơ, phí đào tạo, nạp tiền làm nhiệm vụ…), kể cả bản sao của tin đó trên trang khác. Câu nói về khách hàng (ví dụ "tư vấn khách hàng đặt cọc căn hộ"), quyền lợi ("miễn phí đào tạo", "hỗ trợ phí gửi xe") hay lời cảnh báo lừa đảo thì không bị tính. Xem `public/js/trust.js`.
 
 **Địa bàn**
 
@@ -101,7 +102,7 @@ Các lệnh khác:
 
 **Sắp xếp**
 
-Tin được xếp lên cao khi tiêu đề khớp từ khóa, khi tin nhắc tới kỹ năng của sinh viên, hoặc khi nằm ở khu vực sinh viên chọn. Trên thẻ tin chỉ hiện **lý do**, không hiện điểm hay phần trăm.
+Tin được xếp lên cao khi tiêu đề khớp từ khóa, khi tin nhắc tới kỹ năng của sinh viên, hoặc khi nằm ở khu vực sinh viên chọn. Trên thẻ tin chỉ hiện **lý do**, không hiện điểm hay phần trăm. Tin có dấu hiệu lừa đảo nhẹ hơn (việc nhẹ lương cao, "chỉ cần có điện thoại", tuyển CTV online, trả tiền cho like/đánh giá, gia công tại nhà, liên hệ qua Telegram, không cần phỏng vấn) vẫn được giữ nhưng bị xếp xuống và có cảnh báo.
 
 **Tiết kiệm lượt SearchApi**
 
@@ -165,6 +166,8 @@ Muốn đổi mô hình: chạy `ollama pull <tên>`, sửa `OLLAMA_MODEL=<tên>
 - **Top 10:** dựa trên hồ sơ. Có thể tìm thêm bằng từ khóa khác. Mỗi tin có nút **Apply on <trang gốc>**, mở tab mới tới website đăng tin.
 - **Giờ rảnh (When you’re free to work):** chọn Buổi sáng / chiều / tối / Cuối tuần trong Profile. Tin nào có ghi rõ giờ làm khớp (hoặc ghi giờ linh hoạt) được cộng thêm tối đa 1 điểm và hiện lý do như *Mentions weekends*, *Flexible hours*. Không tin nào bị ẩn, không tốn thêm lượt tìm kiếm.
 - **Lọc Full-time / Part-time:** chọn ở trang Top 10 (hàng *Job type* dưới ô tìm kiếm) hoặc trong Profile. Lựa chọn được lưu vào hồ sơ. Khi chọn Full-time hoặc Part-time, web thêm "full time" / "part time" (hoặc "toàn thời gian" / "bán thời gian") vào câu tìm kiếm và chỉ giữ tin ghi rõ loại đó (trong lịch làm việc Google hiển thị hoặc trong mô tả).
+- **Dấu hiệu tin cậy (Trust signals):** trang chi tiết mỗi tin cho biết tin được đăng trên bao nhiêu trang, có trên trang tuyển dụng quen thuộc (LinkedIn, TopCV, VietnamWorks…) hay website của chính công ty không, cảnh báo nếu nội dung có dấu hiệu lừa đảo, và nút **Tra cứu công ty** mở Cổng thông tin quốc gia về đăng ký doanh nghiệp để sinh viên tự kiểm tra. Đây chỉ là dấu hiệu: web **không** xác minh công ty và không tự lấy dữ liệu từ trang tra cứu (tin tuyển dụng không có mã số thuế, và tự động lấy dữ liệu là scraping). Career coach cũng thấy các cảnh báo này.
+- **Tiếng Anh / Tiếng Việt:** nút **EN | VI** ở góc trên (trên điện thoại cũng có trong menu). Lựa chọn được nhớ trên trình duyệt. Chỉ giao diện được dịch; tên việc, tên công ty và mô tả tin giữ nguyên như trang gốc. Khi đang ở bản VI, Career coach mặc định trả lời tiếng Việt (vẫn đổi sang tiếng Anh nếu được yêu cầu); ở bản EN thì mặc định tiếng Anh.
 - **Lưu tin:** lưu vào Firestore, nên xem được trên mọi thiết bị.
 - **Trang Profile:** sửa hồ sơ, đổi tên, đổi mật khẩu, đăng xuất, **xoá tài khoản**. Xoá tài khoản sẽ xoá hồ sơ, tin đã lưu và kết quả, rồi xoá tài khoản đăng nhập.
 
@@ -196,6 +199,8 @@ public/
   js/firebase.js   toàn bộ lệnh Firebase (SDK 12 tải từ gstatic, không cần build)
   js/api.js        gọi API của server
   js/reference.js  ngành, từ khóa gợi ý, kỹ năng, trường, khu vực TP.HCM
+  js/i18n.js       đổi ngôn ngữ EN/VI; js/i18n-vi.js bảng chữ tiếng Việt của giao diện
+  js/trust.js      dấu hiệu tin cậy: tin đòi tiền (bị loại), cảnh báo lừa đảo, trang đăng tin (dùng chung cho server và trình duyệt)
 firebase/firestore.rules   rules bảo mật để dán vào Firebase
 netlify.toml, netlify/functions/api.mjs   cấu hình và API khi chạy trên Netlify
 test/                      kiểm thử (node --test) với dữ liệu giả lập SearchApi

@@ -186,3 +186,18 @@ test('the coach knows when the student is free', () => {
   const p = systemPrompt(cleanContext({ profile: { keywords: ['Marketing'], freeTimes: ['weekend', 'evening'] } }));
   assert.match(p, /Free time for work: Evenings, Weekends|Free time for work: Weekends, Evenings/);
 });
+
+test('on the Vietnamese site the coach answers in Vietnamese unless asked for English', () => {
+  const ctx = cleanContext({ profile: { keywords: ['Marketing'] }, jobs: [], lang: 'vi' });
+  assert.equal(ctx.lang, 'vi');
+  const p = systemPrompt(ctx);
+  assert.match(p, /reply in Vietnamese, even when they write in English/);
+  assert.match(p, /Reminder: answer in Vietnamese/);
+  assert.equal(cleanContext({ lang: 'fr' }).lang, 'en', 'anything else means English');
+});
+
+test('the coach sees warnings on listings', () => {
+  const p = systemPrompt(cleanContext({ profile: {}, jobs: [{ title: 'CTV online', company: 'X', cautions: ['Promises easy work for high pay', 7] }] }));
+  assert.match(p, /1\. CTV online — X \|.*\| Caution: Promises easy work for high pay/);
+  assert.match(p, /never to pay a deposit, a fee or a top-up/);
+});

@@ -4,6 +4,7 @@
 import { createHash } from 'node:crypto';
 import { fold, WARDS, FORMER, areaByKey, SKILL_ALIASES } from '../public/js/reference.js';
 import { htmlToText } from '../public/js/text.js';
+import { asksForMoney, warningsOf } from '../public/js/trust.js';
 
 const clean = (s, max = 300) => htmlToText(s).replace(/\s+/g, ' ').trim().slice(0, max);
 const isVietnamese = (s) => fold(s) !== String(s).toLowerCase();
@@ -267,6 +268,8 @@ export function relevance(entry, profile, keywords) {
   if (j.area && mine.includes(j.area)) { score += 1; reasons.push('In one of your preferred areas'); }
   if (j.remote && (profile.modes || []).includes('remote')) { score += 1; reasons.push('Can be done remotely'); }
   if (j.kind === 'internship') score += 0.5;
+  // Signs of a fake job ad (see public/js/trust.js): the listing stays, lower down, with a warning.
+  if (j.warnings && j.warnings.length) score -= 2;
   if (profile.jobType && j.jobTypes && j.jobTypes.includes(profile.jobType)) reasons.push(jobTypeLabel(profile.jobType));
   return { score, reasons };
 }
@@ -277,12 +280,13 @@ export function relevance(entry, profile, keywords) {
 export async function runSearch({ keywords, profile = {}, serp, limit = 10, maxCalls = 4, fresh = false, timeBudgetMs = 45000, now = Date.now, onProgress = null }) {
   const deadline = now() + timeBudgetMs;
   let stoppedEarly = false;
-  const stats = { calls: 0, cachedCalls: 0, seen: 0, kept: 0, removed: { experience: 0, senior: 0, abroad: 0, location: 0, jobType: 0, duplicate: 0 } };
+  const stats = { calls: 0, cachedCalls: 0, seen: 0, kept: 0, removed: { experience: 0, senior: 0, abroad: 0, location: 0, jobType: 0, scam: 0, duplicate: 0 } };
   // Job type filter: the searches ask Google for it, and listings that don't say it are left out.
   const jt = profile.jobType === 'fulltime' || profile.jobType === 'parttime' ? profile.jobType : null;
   const form = (kw, i) => { const q = queriesFor(kw)[i]; return jt ? `${q} ${typeSuffix(q, jt)}` : q; };
   const queries = [], errors = [];
   const pool = new Map();
+  const blocked = new Set(); // listings that asked for money, so their copies on other sites are left out too
 
   const consider = (raw, meta) => {
     stats.seen++;
@@ -294,11 +298,17 @@ export async function runSearch({ keywords, profile = {}, serp, limit = 10, maxC
     if (!el.ok) { stats.removed[el.why]++; return; }
     if (jt && !job.jobTypes.includes(jt)) { stats.removed.jobType++; return; }
     const key = dedupeKey(job);
+    // Asking the student to pay a deposit or a fee to get the job is a common scam: leave it out,
+    // with its copies on other sites.
+    if (blocked.has(key)) { stats.removed.duplicate++; return; }
+    if (asksForMoney(job)) { stats.removed.scam++; blocked.add(key); pool.delete(key); return; }
+    job.warnings = warningsOf(job);
     const prev = pool.get(key);
     if (prev) {
       stats.removed.duplicate++;
       if (!prev.keywords.includes(meta.kw)) prev.keywords.push(meta.kw);
       for (const o of job.applyOptions) if (!prev.job.applyOptions.some((p) => p.link === o.link)) prev.job.applyOptions.push(o);
+      for (const w of job.warnings) if (!prev.job.warnings.includes(w)) prev.job.warnings.push(w);
       return;
     }
     pool.set(key, { job: { ...job, area: loc.area, remote: Boolean(loc.remote), kind: el.kind, kindReason: el.reason }, keywords: [meta.kw], order: meta.order });

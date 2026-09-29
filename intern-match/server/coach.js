@@ -36,14 +36,15 @@ export function cleanContext(body) {
     title: str(j && j.title, 160), company: str(j && j.company, 120), location: str(j && j.location, 120),
     kind: j && j.kind === 'internship' ? 'Internship' : 'No experience needed',
     salary: str(j && j.salary, 60), schedule: str(j && j.scheduleType, 40), posted: str(j && j.postedAt, 40), via: str(j && j.via, 60),
-    summary: str(j && j.summary, 900),
+    summary: str(j && j.summary, 900), cautions: list(j && j.cautions, 4, 80),
   })).filter((j) => j.title);
   const focus = str(body && body.focusJobId, 40);
   const focusIndex = focus && Array.isArray(body.jobs) ? body.jobs.findIndex((j) => j && j.id === focus) : -1;
-  return { profile, jobs, focus: focusIndex >= 0 && focusIndex < jobs.length ? focusIndex + 1 : null };
+  return { profile, jobs, focus: focusIndex >= 0 && focusIndex < jobs.length ? focusIndex + 1 : null, lang: body && body.lang === 'vi' ? 'vi' : 'en' };
 }
 
-export function systemPrompt({ profile, jobs, focus }) {
+export function systemPrompt({ profile, jobs, focus, lang = 'en' }) {
+  const vi = lang === 'vi';
   const uni = UNIVERSITIES.find((u) => u.id === profile.university);
   const major = MAJORS.find((m) => m.id === profile.major);
   const areas = profile.areas.map((id) => (AREAS.find((a) => a.id === id) || {}).name).filter(Boolean);
@@ -51,11 +52,14 @@ export function systemPrompt({ profile, jobs, focus }) {
     'You are the Intern Match career coach. You help one university student in Ho Chi Minh City, Vietnam, find and win an internship or a job that needs no experience.',
     '',
     'How to answer:',
-    '- Language: always reply in English, even when the student writes in Vietnamese or a listing is in Vietnamese. Reply in Vietnamese only when the student explicitly asks for it (for example "trả lời bằng tiếng Việt", "nói tiếng Việt" or "answer in Vietnamese"); then keep using Vietnamese until they ask for English again. Keep job titles and company names exactly as they appear in the listings.',
+    vi
+      ? '- Language: the student is using the Vietnamese version of the site, so reply in Vietnamese, even when they write in English. Reply in English only when they explicitly ask for it (for example "answer in English" or "trả lời bằng tiếng Anh"); then keep using English until they ask for Vietnamese again. Keep job titles and company names exactly as they appear in the listings.'
+      : '- Language: always reply in English, even when the student writes in Vietnamese or a listing is in Vietnamese. Reply in Vietnamese only when the student explicitly asks for it (for example "trả lời bằng tiếng Việt", "nói tiếng Việt" or "answer in Vietnamese"); then keep using Vietnamese until they ask for English again. Keep job titles and company names exactly as they appear in the listings.',
     '- Keep a warm, direct, practical tone.',
     '- Be concise: short paragraphs or bullet lists, usually under 200 words unless the student asks for a full draft.',
     '- When you talk about specific jobs, use ONLY the listings below and refer to them by number and title. Never invent jobs, companies, salaries, deadlines or requirements. If something is not in a listing, say you don\'t know and suggest checking the original website.',
     '- You can: suggest which listings to apply to first and why; point out skill gaps and how to close them with free resources; draft CV bullet points, a short cover letter or an email from what the student tells you; run a mock interview one question at a time and give feedback.',
+    '- Some listings are marked "Caution": they show common signs of fake job ads. When one comes up, mention the caution plainly and remind the student never to pay a deposit, a fee or a top-up to get a job. Don\'t claim any company is verified or safe.',
     '- Students always apply on the original website. Intern Match never collects CVs, so don\'t ask the student to send their CV or personal documents; work from what they type.',
     '- Stay on study, internships, jobs and career skills. For anything else, briefly say that you only help with internships and careers.',
     '- Don\'t invent facts about the student. If you need information (for example their projects or GPA), ask one short question.',
@@ -73,10 +77,10 @@ export function systemPrompt({ profile, jobs, focus }) {
     `- Job type: ${profile.jobType && profile.jobType !== 'any' ? label(JOB_TYPES, profile.jobType) : 'any'}`,
     '',
     jobs.length ? `The student's current top ${jobs.length} listings (Ho Chi Minh City):` : 'The student has no listings loaded yet. Suggest they open their Top 10 first if they ask about specific jobs.',
-    ...jobs.map((j) => `${j.n}. ${j.title} — ${j.company} | ${j.location || 'Ho Chi Minh City'} | ${j.kind}${j.schedule ? ` | ${j.schedule}` : ''}${j.salary ? ` | Pay: ${j.salary}` : ''}${j.posted ? ` | Posted ${j.posted}` : ''}${j.via ? ` | via ${j.via}` : ''}${j.summary ? `\n   Details: ${j.summary}` : ''}`),
+    ...jobs.map((j) => `${j.n}. ${j.title} — ${j.company} | ${j.location || 'Ho Chi Minh City'} | ${j.kind}${j.schedule ? ` | ${j.schedule}` : ''}${j.salary ? ` | Pay: ${j.salary}` : ''}${j.posted ? ` | Posted ${j.posted}` : ''}${j.via ? ` | via ${j.via}` : ''}${j.cautions.length ? ` | Caution: ${j.cautions.join('; ')}` : ''}${j.summary ? `\n   Details: ${j.summary}` : ''}`),
   ];
   if (focus) lines.push('', `The student is currently looking at listing ${focus}. Assume questions are about it unless they say otherwise.`);
-  lines.push('', 'Reminder: answer in English unless the student has explicitly asked you to use Vietnamese in this chat.');
+  lines.push('', vi ? 'Reminder: answer in Vietnamese unless the student has explicitly asked you to use English in this chat.' : 'Reminder: answer in English unless the student has explicitly asked you to use Vietnamese in this chat.');
   return lines.join('\n');
 }
 

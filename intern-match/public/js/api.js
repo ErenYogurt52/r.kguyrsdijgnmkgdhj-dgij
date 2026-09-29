@@ -44,14 +44,14 @@ export async function searchJobs({ keywords, profile, fresh = false }) {
 }
 
 // Career coach: streams newline-delimited JSON from /api/coach and calls onText for each piece.
-export async function coachStream({ messages, profile, jobs, focusJobId, name, onText, signal }) {
+export async function coachStream({ messages, profile, jobs, focusJobId, name, lang, onText, signal }) {
   const token = await idToken();
   let res;
   try {
     res = await fetch('/api/coach', {
       method: 'POST', signal,
       headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ messages, profile, jobs, focusJobId, name }),
+      body: JSON.stringify({ messages, profile, jobs, focusJobId, name, lang }),
     });
   } catch (e) {
     if (e.name === 'AbortError') throw e;

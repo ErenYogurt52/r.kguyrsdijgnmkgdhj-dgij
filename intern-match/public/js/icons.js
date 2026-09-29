@@ -10,6 +10,8 @@ const STROKE = {
     external: '<path d="M13.5 4.5h6v6M19.5 4.5L11 13M18 14v5.5H4.5V6H10"/>',
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
     check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    alert: '<path d="M12 3.8l9 15.7H3z"/><path d="M12 10v4.2M12 16.6v.4"/>',
+    shield: '<path d="M12 3l7.5 3v5.5c0 4.6-3.2 8.3-7.5 9.5-4.3-1.2-7.5-4.9-7.5-9.5V6z"/><path d="M8.7 12l2.3 2.3 4.3-4.3"/>',
     minus: '<path d="M6 12h12"/>',
     question: '<path d="M9.5 9.5a2.5 2.5 0 1 1 3.3 2.4c-.5.2-.8.7-.8 1.2v.9M12 17v.5"/>',
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',

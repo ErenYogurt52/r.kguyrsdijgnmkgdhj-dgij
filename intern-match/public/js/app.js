@@ -6,6 +6,8 @@ import { SPRITE, icon } from './icons.js';
 import { toHtml, esc } from './html.js';
 import { fold, AREAS, JOB_TYPES, FREE_TIMES } from './reference.js';
 import { htmlToText } from './text.js';
+import { t, setLang, getLang, translateDom } from './i18n.js';
+import { trustOf, WARNING_TEXT } from './trust.js';
 
 const EMPTY_PROFILE = () => ({ university: '', major: '', year: '', keywords: [], skills: [], areas: [], modes: [], jobType: 'any', freeTimes: [] });
 const FREE_IDS = new Set(FREE_TIMES.map(([id]) => id));
@@ -142,6 +144,7 @@ function coachJobs() {
   return list.slice(0, 12).map((j) => ({
     id: j.id, title: j.title, company: j.company, location: j.location, kind: j.kind, salary: j.salary, scheduleType: View.jobTypeText(j), postedAt: j.postedAt, via: j.via,
     summary: htmlToText([...(j.highlights || []).flatMap((hl) => [`${hl.title}:`, ...hl.items.slice(0, 6)]), j.description || ''].join(' ')).replace(/\s+/g, ' ').slice(0, 900),
+    cautions: trustOf(j).warnings.map((w) => WARNING_TEXT[w]),
   }));
 }
 
@@ -167,7 +170,7 @@ async function sendCoach(text) {
   try {
     await coachStream({
       messages: c.messages.filter((m) => m !== reply).map(({ role, content }) => ({ role, content })),
-      profile: S.profile, jobs: coachJobs(), focusJobId: c.focus, name: S.user && S.user.name, signal: c.abort.signal,
+      profile: S.profile, jobs: coachJobs(), focusJobId: c.focus, name: S.user && S.user.name, lang: getLang(), signal: c.abort.signal,
       onText: (t) => {
         reply.content += t;
         const body = document.querySelector(`.msg[data-msg="${mine.messages.indexOf(reply)}"] .msg-body`);
@@ -178,7 +181,7 @@ async function sendCoach(text) {
     announce('The coach replied.');
   } catch (e) {
     if (e.name === 'AbortError' || S.coach !== mine) return;
-    if (reply.content) { reply.pending = false; reply.content += '\n\n*(Reply cut off.)*'; }
+    if (reply.content) { reply.pending = false; reply.content += `\n\n*${t('(Reply cut off.)')}*`; }
     else mine.messages.pop();
     mine.error = e.message || 'Something went wrong. Try again.';
   } finally {
@@ -239,8 +242,10 @@ function render(opts = {}) {
   document.documentElement.classList.toggle('no-scroll', S.ui.menu);
   els.main.innerHTML = page(c);
   els.footer.innerHTML = toHtml(View.Footer(c));
+  for (const el of [els.header, els.menu, els.main, els.footer]) translateDom(el);
+  if (els.skip) els.skip.textContent = t('Skip to content');
   document.body.classList.toggle('has-apply-bar', R.name === 'detail' && Boolean($('.apply-bar')));
-  document.title = `${TITLES[R.name] || 'Intern Match'} · Intern Match`;
+  document.title = `${t(TITLES[R.name] || 'Intern Match')} · Intern Match`;
   if (S.ui.menu) { $('#mobile-menu [data-fk="menu-close"]').focus(); return; }
   if (opts.focus) {
     window.scrollTo(0, 0);
@@ -258,14 +263,14 @@ function render(opts = {}) {
 }
 
 function toast(msg) {
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.innerHTML = `<p class="toast-msg">${esc(msg)}</p><button type="button" class="icon-btn toast-x" aria-label="Dismiss">${toHtml(icon('close'))}</button>`;
-  t.querySelector('button').onclick = () => t.remove();
-  els.toasts.append(t);
-  setTimeout(() => t.remove(), 5000);
+  const box = document.createElement('div');
+  box.className = 'toast';
+  box.innerHTML = `<p class="toast-msg">${esc(t(msg))}</p><button type="button" class="icon-btn toast-x" aria-label="${esc(t('Dismiss'))}">${toHtml(icon('close'))}</button>`;
+  box.querySelector('button').onclick = () => box.remove();
+  els.toasts.append(box);
+  setTimeout(() => box.remove(), 5000);
 }
-const announce = (msg) => { els.status.textContent = ''; setTimeout(() => { els.status.textContent = msg; }, 50); };
+const announce = (msg) => { els.status.textContent = ''; setTimeout(() => { els.status.textContent = t(msg); }, 50); };
 
 /* ---------------- Errors ---------------- */
 const AUTH_ERRORS = {
@@ -301,7 +306,7 @@ function friendly(e) {
 function formError(form, msg) {
   const el = form.querySelector('[data-role="error"]');
   if (!el) { if (msg) toast(msg); return; }
-  el.textContent = msg || '';
+  el.textContent = t(msg || '');
   el.hidden = !msg;
 }
 async function busy(form, fn) {
@@ -335,7 +340,7 @@ const actions = {
     const show = input.type === 'password';
     input.type = show ? 'text' : 'password';
     el.setAttribute('aria-pressed', String(show));
-    el.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    el.setAttribute('aria-label', t(show ? 'Hide password' : 'Show password'));
     el.innerHTML = toHtml(icon(show ? 'eye-off' : 'eye'));
   },
   google: async (el) => {
@@ -360,7 +365,8 @@ const actions = {
       toast(friendly(e));
     }
   },
-  'coach-suggest': (el) => sendCoach(el.dataset.q),
+  'coach-suggest': (el) => sendCoach(t(el.dataset.q)),
+  lang: (el) => { setLang(el.dataset.lang); els.toasts.replaceChildren(); els.status.textContent = ''; render({ keepFocus: true }); },
   'coach-reset': () => { resetCoach(); render(); document.getElementById('coach-input')?.focus(); },
   'coach-retry': () => {
     const c = S.coach;
@@ -400,6 +406,7 @@ const actions = {
   },
   'delete-open': () => {
     els.dialog.innerHTML = toHtml(View.DeleteDialog(ctx()));
+    translateDom(els.dialog);
     els.dialog.showModal();
     els.dialog.querySelector('input, #dlg-title')?.focus();
   },
@@ -517,7 +524,7 @@ function bind() {
 
 /* ---------------- Boot ---------------- */
 async function boot() {
-  Object.assign(els, { header: $('#site-header'), menu: $('#mobile-menu'), main: $('#main'), footer: $('#site-footer'), toasts: $('#toasts'), status: $('#sr-status'), dialog: $('#dlg') });
+  Object.assign(els, { header: $('#site-header'), menu: $('#mobile-menu'), main: $('#main'), footer: $('#site-footer'), toasts: $('#toasts'), status: $('#sr-status'), dialog: $('#dlg'), skip: $('.skip-link') });
   document.body.insertAdjacentHTML('afterbegin', SPRITE);
   bind();
   render();
@@ -528,7 +535,7 @@ async function boot() {
   try {
     S.config = await getConfig();
   } catch (e) {
-    els.main.innerHTML = toHtml(View.notfound('Can’t reach the server.', 'Start it with npm start, then reload this page.'));
+    els.main.innerHTML = toHtml(View.notfound('Can’t reach the server.', 'Start it with npm start, then reload this page.')); translateDom(els.main);
     return;
   }
   if (!S.config.firebase) { S.user = null; route(); return; }
@@ -536,7 +543,7 @@ async function boot() {
     await FB.init(S.config.firebase);
   } catch (e) {
     console.error(e);
-    els.main.innerHTML = toHtml(View.notfound('Couldn’t load Firebase.', 'Check your internet connection and the FIREBASE_* values in .env, then reload.'));
+    els.main.innerHTML = toHtml(View.notfound('Couldn’t load Firebase.', 'Check your internet connection and the FIREBASE_* values in .env, then reload.')); translateDom(els.main);
     return;
   }
   FB.onUser(async (user) => {
