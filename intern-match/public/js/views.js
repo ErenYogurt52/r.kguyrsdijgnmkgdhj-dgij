@@ -186,7 +186,7 @@ export function home(ctx) {
         : h`<div class="hero-cta"><a class="btn btn-primary search-btn" href="#/signup">Create a free account ${icon('arrow')}</a><a class="btn btn-ghost-dark search-btn" href="#/login">Log in</a></div>`}
     </div></section>
   <section class="section" aria-labelledby="how-title"><div class="container how-grid">
-    <div class="how-panel grain"><p class="how-big">Everyone starts somewhere.<br>Start here.</p><p class="how-cap">Internships and no-experience roles in Ho Chi Minh City, picked for your major and skills.</p></div>
+    <div class="how-panel grain"><p class="how-big">Unlock your potential right now.</p><p class="how-cap">Internships and no-experience roles in Ho Chi Minh City, picked for your major and skills.</p></div>
     <div><p class="eyebrow">How it works</p><h2 id="how-title" class="h-section">How Intern Match works.</h2>
       <ol class="steps">${STEPS.map(([t, d], i) => h`<li><span class="step-n" aria-hidden="true">${pad(i + 1)}</span><h3 class="step-t">${t}</h3><p class="step-d">${d}</p></li>`)}</ol>
       <a class="link-arrow" href="#/how-it-works">What we keep and remove ${icon('arrow')}</a></div>
