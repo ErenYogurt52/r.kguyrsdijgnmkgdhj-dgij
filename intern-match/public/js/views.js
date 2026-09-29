@@ -2,7 +2,7 @@
 import { h, raw, esc } from './html.js';
 import { icon, Logo, HERO_ART } from './icons.js';
 import { htmlToText } from './text.js';
-import { MAJORS, MAJOR_KEYWORDS, MAJOR_SKILLS, SKILL_NAMES, UNIVERSITIES, AREAS, MODES, YEARS, JOB_TYPES, fold } from './reference.js';
+import { MAJORS, MAJOR_KEYWORDS, MAJOR_SKILLS, SKILL_NAMES, UNIVERSITIES, AREAS, MODES, YEARS, JOB_TYPES, FREE_TIMES, fold } from './reference.js';
 
 const VI_RE = /[ăâđêôơưàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]/i;
 export const txt = (t) => (VI_RE.test(t || '') ? h`<span lang="vi">${t}</span>` : t);
@@ -73,7 +73,7 @@ export function Footer(ctx) {
       <div><h2 class="footer-h">Listings</h2><p class="footer-note">Each listing links to the website that posted it.</p></div>
       <div><h2 class="footer-h">Your data</h2><p class="footer-note">Your account, profile and saved list are stored in Firebase. Intern Match never asks for your CV.</p></div>
     </div>
-    <div class="footer-base">   <span>© 2026 InternMatch by Nhom 6 STKN</span><span>Built for university students in Ho Chi Minh City</span></div>
+    <div class="footer-base"><span>© Nhóm 6 STKN</span><span>Built for university students in Ho Chi Minh City</span></div>
   </div>`;
 }
 
@@ -160,7 +160,7 @@ export function home(ctx) {
         : h`<div class="hero-cta"><a class="btn btn-primary search-btn" href="#/signup">Create a free account ${icon('arrow')}</a><a class="btn btn-ghost-dark search-btn" href="#/login">Log in</a></div>`}
     </div></section>
   <section class="section" aria-labelledby="how-title"><div class="container how-grid">
-    <div class="how-panel grain"><p class="how-big">Unlock your potential<br>right now.</p><p class="how-cap">Internships and no-experience roles in Ho Chi Minh City, picked for your major and skills.</p></div>
+    <div class="how-panel grain"><p class="how-big">Everyone starts somewhere.<br>Start here.</p><p class="how-cap">Internships and no-experience roles in Ho Chi Minh City, picked for your major and skills.</p></div>
     <div><p class="eyebrow">How it works</p><h2 id="how-title" class="h-section">How Intern Match works.</h2>
       <ol class="steps">${STEPS.map(([t, d], i) => h`<li><span class="step-n" aria-hidden="true">${pad(i + 1)}</span><h3 class="step-t">${t}</h3><p class="step-d">${d}</p></li>`)}</ol>
       <a class="link-arrow" href="#/how-it-works">What we keep and remove ${icon('arrow')}</a></div>
@@ -193,7 +193,7 @@ export function how() {
       <li>Senior, lead and manager roles.</li>
       <li>Jobs in other provinces, and overseas labour programmes.</li>
       <li>The same job posted on several sites. We keep one and list every site you can apply on.</li></ul></div></section>
-    <section><h2 class="h2">How the top 10 is ordered</h2><p>A listing ranks higher when its title matches one of your keywords, when it mentions skills you have, and when it’s in one of your preferred areas. We show the reasons on each card rather than a score.</p></section>
+    <section><h2 class="h2">How the top 10 is ordered</h2><p>A listing ranks higher when its title matches one of your keywords, when it mentions skills you have, when it’s in one of your preferred areas, and when it mentions the times you’re free (or flexible hours). We show the reasons on each card rather than a score.</p></section>
     <section><h2 class="h2">Full-time or part-time</h2><p>Pick a job type on your Top 10 page or in your profile. With Full-time or Part-time, we search for that type and only show listings that say they are full-time or part-time. Many listings don’t say, so choose Any to see everything.</p></section>
     <section><h2 class="h2">Career coach</h2><p>The coach is an AI assistant. It reads your profile and your top 10 to suggest where to apply first, which skills to build, and to help with CV lines and interview practice. It only talks about listings you can see and can still make mistakes, so check details on the original website.</p></section>
     <section><h2 class="h2">Your data</h2><p>Your account, profile, latest results and saved list are stored in your Firebase account and only you can read them. Intern Match never takes applications or CVs.</p></section>
@@ -266,7 +266,7 @@ export function ProfileForm(d, ctx, mode) {
   const kwSug = (d.major ? MAJOR_KEYWORDS[d.major] : ['Marketing', 'Data analyst', 'Accounting', 'Business development', 'Software engineer', 'Graphic design']).filter((k) => !d.keywords.includes(k));
   const skSug = (d.major ? MAJOR_SKILLS[d.major] : ['Excel', 'PowerPoint', 'Canva', 'Content writing', 'SQL', 'Python', 'Figma']).filter((s) => !d.skills.includes(s)).slice(0, 8);
   const used = d.keywords.slice(0, max);
-  const parts = [['Study', d.major], ['Keywords', d.keywords.length], ['Skills', d.skills.length], ['Preferences', d.areas.length || d.modes.length]];
+  const parts = [['Study', d.major], ['Keywords', d.keywords.length], ['Skills', d.skills.length], ['Preferences', d.areas.length || d.modes.length || (d.freeTimes || []).length]];
   return h`<div class="container profile">
     <form class="profile-form" data-submit="profile" novalidate>
       <section class="pf-sec" aria-labelledby="pf-s1"><p class="pf-num" aria-hidden="true">01</p><div class="pf-fields"><h2 class="h2" id="pf-s1">Study</h2>
@@ -281,6 +281,8 @@ export function ProfileForm(d, ctx, mode) {
       <section class="pf-sec" aria-labelledby="pf-s4"><p class="pf-num" aria-hidden="true">04</p><div class="pf-fields"><h2 class="h2" id="pf-s4">Preferences</h2>
         ${Checks('areas', 'Preferred areas', AREAS.map((a) => [a.id, a.name]), d.areas)}
         ${Checks('modes', 'Working mode', MODES, d.modes)}
+        ${Checks('freeTimes', 'When you’re free to work', FREE_TIMES, d.freeTimes || [])}
+        <p class="hint pf-free-hint">Listings that mention these times, or flexible hours, move up your list. Nothing is hidden.</p>
         ${Seg('jobType', 'Job type', JOB_TYPES, d.jobType || 'any')}</div></section>
       <div class="pf-actions"><button class="btn btn-primary" type="submit" data-fk="pf-save"${ctx.busy ? raw(' disabled aria-busy="true"') : ''}>${mode === 'welcome' ? h`Find my top 10 ${icon('arrow')}` : 'Save profile'}</button>
         ${mode === 'welcome' ? '' : h`<a class="btn btn-outline" href="#/top">Cancel</a>`}</div>

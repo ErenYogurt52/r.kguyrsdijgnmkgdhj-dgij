@@ -178,6 +178,8 @@ export const AREAS = [
 export const MODES = [['onsite', 'On-site'], ['hybrid', 'Hybrid'], ['remote', 'Remote']];
 // Job type filter. 'any' shows everything; the others keep only listings that say full-time / part-time.
 export const JOB_TYPES = [['any', 'Any'], ['fulltime', 'Full-time'], ['parttime', 'Part-time']];
+// When the student is free. Only used to move listings that mention these times (or flexible hours) up; nothing is filtered out.
+export const FREE_TIMES = [['morning', 'Mornings'], ['afternoon', 'Afternoons'], ['evening', 'Evenings'], ['weekend', 'Weekends']];
 export const YEARS = [['1', 'Year 1'], ['2', 'Year 2'], ['3', 'Year 3'], ['4', 'Year 4 or final'], ['grad', 'Recent graduate']];
 
 export const majorName = (id) => (MAJORS.find((m) => m.id === id) || {}).name || '';

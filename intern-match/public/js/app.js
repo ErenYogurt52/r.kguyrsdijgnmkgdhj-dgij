@@ -4,14 +4,15 @@ import { getConfig, searchJobs, coachStream } from './api.js';
 import * as View from './views.js';
 import { SPRITE, icon } from './icons.js';
 import { toHtml, esc } from './html.js';
-import { fold, AREAS, JOB_TYPES } from './reference.js';
+import { fold, AREAS, JOB_TYPES, FREE_TIMES } from './reference.js';
 import { htmlToText } from './text.js';
 
-const EMPTY_PROFILE = () => ({ university: '', major: '', year: '', keywords: [], skills: [], areas: [], modes: [], jobType: 'any' });
+const EMPTY_PROFILE = () => ({ university: '', major: '', year: '', keywords: [], skills: [], areas: [], modes: [], jobType: 'any', freeTimes: [] });
+const FREE_IDS = new Set(FREE_TIMES.map(([id]) => id));
 const JOB_TYPE_IDS = new Set(JOB_TYPES.map(([id]) => id));
 const AREA_IDS = new Set(AREAS.map((a) => a.id));
 // Keeps only area ids that still exist.
-const cleanProfile = (p) => ({ ...EMPTY_PROFILE(), ...(p || {}), keywords: [...((p && p.keywords) || [])], skills: [...((p && p.skills) || [])], areas: ((p && p.areas) || []).filter((id) => AREA_IDS.has(id)), modes: [...((p && p.modes) || [])], jobType: JOB_TYPE_IDS.has(p && p.jobType) ? p.jobType : 'any' });
+const cleanProfile = (p) => ({ ...EMPTY_PROFILE(), ...(p || {}), keywords: [...((p && p.keywords) || [])], skills: [...((p && p.skills) || [])], areas: ((p && p.areas) || []).filter((id) => AREA_IDS.has(id)), modes: [...((p && p.modes) || [])], jobType: JOB_TYPE_IDS.has(p && p.jobType) ? p.jobType : 'any', freeTimes: ((p && p.freeTimes) || []).filter((t) => FREE_IDS.has(t)) });
 
 const S = {
   config: null, coachAvatar: false, user: undefined, loadedUid: null, loadingUser: false, dataError: null,
@@ -45,7 +46,7 @@ function go(path) {
 
 const hasKeywords = () => Boolean(S.profile && S.profile.keywords.length);
 const maxKw = () => (S.config && S.config.maxKeywords) || 3;
-const profileKey = (p) => JSON.stringify([p.keywords.slice(0, maxKw()), p.skills, p.areas, p.modes, p.jobType || 'any']);
+const profileKey = (p) => JSON.stringify([p.keywords.slice(0, maxKw()), p.skills, p.areas, p.modes, p.jobType || 'any', p.freeTimes || []]);
 const jobType = () => (S.profile && S.profile.jobType) || 'any';
 const searchKey = (r) => (r.params.q ? `q:${fold(r.params.q).trim()}|${jobType()}` : `p:${profileKey(S.profile)}`);
 

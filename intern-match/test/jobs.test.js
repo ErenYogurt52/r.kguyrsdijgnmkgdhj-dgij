@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalize, checkEligibility, checkLocation, requiredYears, runSearch, queriesFor, cleanKeywords, dedupeKey, skillHits, jobTypesOf } from '../server/jobs.js';
+import { normalize, checkEligibility, checkLocation, requiredYears, runSearch, queriesFor, cleanKeywords, dedupeKey, skillHits, jobTypesOf, timeHintsOf, relevance } from '../server/jobs.js';
 import { fold } from '../public/js/reference.js';
 import { MARKETING_P1, MARKETING_P2, mockRoutes } from './fixtures/google-jobs.js';
 
@@ -185,4 +185,30 @@ test('runSearch stops starting new searches when its time budget runs out', asyn
   assert.deepEqual(log.map((l) => l.q), ['Marketing intern', 'p2', 'thực tập sinh Marketing']);
   assert.ok(log.every((l) => l.left >= 5000), 'every search had time left when it started');
   assert.equal(out.meta.stoppedEarly, true);
+});
+
+test('free time: finds clear mentions of working hours, ignores Mon–Sat ranges', () => {
+  const j = (description, o = {}) => ({ title: 'Marketing Intern', extensions: [], highlights: [], description, ...o });
+  assert.deepEqual(timeHintsOf(j('Làm việc vào cuối tuần (Thứ 7, Chủ nhật).')), ['weekend']);
+  assert.deepEqual(timeHintsOf(j('Thời gian làm việc: Thứ 2 - Thứ 7, 8h - 17h.')), []);
+  assert.deepEqual(timeHintsOf(j('Monday to Saturday, office hours.')), []);
+  assert.deepEqual(timeHintsOf(j('Ca sáng hoặc ca chiều, thời gian linh hoạt theo lịch học.')), ['morning', 'afternoon', 'flexible']);
+  assert.deepEqual(timeHintsOf(j('Evening shifts available. Flexible hours for students.')), ['evening', 'flexible']);
+  assert.deepEqual(timeHintsOf(j('Tôi muốn tuyển bạn chăm chỉ.')), [], '"tôi" is not "tối"');
+  assert.deepEqual(timeHintsOf(j('Sang Nhật làm việc')), [], '"sang" alone is not morning');
+  assert.deepEqual(timeHintsOf(j('Support the team with reports.')), []);
+});
+
+test('free time only nudges the order (+1 at most) and shows a reason; nothing is removed', () => {
+  const entry = (hints) => ({ job: { title: 'Marketing Intern', description: '', highlights: [], timeHints: hints, kind: 'internship' }, keywords: ['Marketing'] });
+  const p = { freeTimes: ['weekend', 'evening'] };
+  const a = relevance(entry(['weekend', 'evening']), p, ['Marketing']);
+  const b = relevance(entry([]), p, ['Marketing']);
+  const c = relevance(entry(['flexible']), p, ['Marketing']);
+  const d = relevance(entry(['morning']), p, ['Marketing']);
+  assert.equal(a.score - b.score, 1);
+  assert.equal(a.reasons[1], 'Mentions weekends and evenings', 'shown right after the keyword reason, so it fits on the card');
+  assert.equal(c.reasons[1], 'Flexible hours');
+  assert.equal(d.score, b.score, 'other times do not count');
+  assert.equal(relevance(entry(['weekend']), {}, ['Marketing']).score, b.score, 'no free time chosen: no change');
 });

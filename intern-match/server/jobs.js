@@ -73,6 +73,7 @@ export function normalize(raw) {
     shareLink: isHttp(raw.sharing_link) ? raw.sharing_link : null,
   };
   job.jobTypes = jobTypesOf(job);
+  job.timeHints = timeHintsOf(job);
   return job;
 }
 
@@ -100,6 +101,23 @@ export function jobTypesOf(job) {
   }
   return [...types];
 }
+/* ---------- Working hours mentioned in a listing (for the student's free time) ---------- */
+// Looks only for clear phrases; most listings don't say, and that's fine: this never removes a listing.
+const TIME_PATTERNS = {
+  morning: /(?<![a-z])(mornings?|morning shifts?|ca sang|buoi sang|lam sang)(?![a-z])/,
+  afternoon: /(?<![a-z])(afternoons?|afternoon shifts?|ca chieu|buoi chieu|lam chieu)(?![a-z])/,
+  evening: /(?<![a-z])(evenings?|evening shifts?|night shifts?|ca toi|buoi toi|lam toi|ca dem)(?![a-z])/,
+  weekend: /(?<![a-z])(weekends?|saturdays?|sundays?|cuoi tuan|thu 7|thu bay|chu nhat)(?![a-z])/,
+  flexible: /(?<![a-z])(flexible (working )?(hours|schedules?|time|timetable|shifts?)|flexible working|work around your (classes|studies|study schedule)|(thoi gian|gio|lich|ca)( lam viec| lam)? linh (hoat|dong)|linh hoat (thoi gian|gio|lich)|theo lich hoc|phu hop (voi )?lich hoc|tu (chon|sap xep) (ca|lich|thoi gian|gio))(?![a-z])/,
+};
+// "Thứ 2 – Thứ 7" / "Mon–Sat" is a full working week, not weekend work.
+const WEEK_RANGE = /(thu\s*[2-6]|thu hai|monday|mon)\s*(-|–|den|toi|to|through)\s*(thu\s*7|thu bay|chu nhat|cn|saturday|sat|sunday|sun)(?![a-z])/g;
+export function timeHintsOf(job) {
+  const text = fold([job.title || '', job.scheduleType || '', ...(job.extensions || []), job.description || '', ...(job.highlights || []).flatMap((h) => h.items)].join('\n')).replace(WEEK_RANGE, ' ');
+  return Object.keys(TIME_PATTERNS).filter((k) => TIME_PATTERNS[k].test(text));
+}
+const TIME_WORDS = { morning: 'mornings', afternoon: 'afternoons', evening: 'evenings', weekend: 'weekends' };
+
 const typeSuffix = (q, jt) => (isVietnamese(q) ? { parttime: 'bán thời gian', fulltime: 'toàn thời gian' } : { parttime: 'part time', fulltime: 'full time' })[jt];
 
 /* ---------- Location: Ho Chi Minh City only ---------- */
@@ -236,6 +254,13 @@ export function relevance(entry, profile, keywords) {
   if (inTitle) { score += 3; reasons.push(`Title matches “${inTitle}”`); }
   else if (inBody) { score += 1; reasons.push(`Mentions “${inBody}”`); }
   else reasons.push(`Found when searching “${entry.keywords[0]}”`);
+  // Free time: a small nudge (never more than +1) and a reason the student can see on the card.
+  const free = (profile.freeTimes || []).filter((t) => TIME_WORDS[t]);
+  if (free.length && j.timeHints) {
+    const hit = free.filter((t) => j.timeHints.includes(t));
+    if (hit.length) { score += 1; reasons.push(`Mentions ${hit.map((t) => TIME_WORDS[t]).join(' and ')}`); }
+    else if (j.timeHints.includes('flexible')) { score += 1; reasons.push('Flexible hours'); }
+  }
   const skills = skillHits(`${title}\n${body}`, profile.skills);
   if (skills.length) { score += Math.min(2, skills.length); reasons.push(`Mentions your skills: ${skills.slice(0, 3).join(', ')}`); }
   const mine = profile.areas || [];

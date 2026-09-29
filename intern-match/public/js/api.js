@@ -18,7 +18,7 @@ export async function searchJobs({ keywords, profile, fresh = false }) {
     res = await fetch('/api/search', {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ keywords, profile: { skills: profile.skills || [], areas: profile.areas || [], modes: profile.modes || [], jobType: profile.jobType || 'any' }, fresh }),
+      body: JSON.stringify({ keywords, profile: { skills: profile.skills || [], areas: profile.areas || [], modes: profile.modes || [], jobType: profile.jobType || 'any', freeTimes: profile.freeTimes || [] }, fresh }),
     });
   } catch {
     throw new ApiError('Can’t reach the Intern Match server. Check that it is running and try again.', 'network', 0);

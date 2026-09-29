@@ -181,3 +181,8 @@ test('the coach answers in English unless the student asks for Vietnamese', () =
   assert.match(p, /Reminder: answer in English/);
   assert.doesNotMatch(p, /language the student writes in/);
 });
+
+test('the coach knows when the student is free', () => {
+  const p = systemPrompt(cleanContext({ profile: { keywords: ['Marketing'], freeTimes: ['weekend', 'evening'] } }));
+  assert.match(p, /Free time for work: Evenings, Weekends|Free time for work: Weekends, Evenings/);
+});
