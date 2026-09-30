@@ -310,7 +310,6 @@ export function ProfileForm(d, ctx, mode) {
         ${Checks('areas', 'Preferred areas', AREAS.map((a) => [a.id, a.name]), d.areas)}
         ${Checks('modes', 'Working mode', MODES, d.modes)}
         ${Checks('freeTimes', 'When you’re free to work', FREE_TIMES, d.freeTimes || [])}
-        <p class="hint pf-free-hint">Listings that mention these times, or flexible hours, move up your list. Nothing is hidden.</p>
         ${Seg('jobType', 'Job type', JOB_TYPES, d.jobType || 'any')}</div></section>
       <div class="pf-actions"><button class="btn btn-primary" type="submit" data-fk="pf-save"${ctx.busy ? raw(' disabled aria-busy="true"') : ''}>${mode === 'welcome' ? h`Find my top 10 ${icon('arrow')}` : 'Save profile'}</button>
         ${mode === 'welcome' ? '' : h`<a class="btn btn-outline" href="#/top">Cancel</a>`}</div>

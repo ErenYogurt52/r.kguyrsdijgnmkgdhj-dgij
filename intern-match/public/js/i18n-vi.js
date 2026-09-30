@@ -245,7 +245,6 @@ export const VI = {
   'Afternoons': 'Buổi chiều',
   'Evenings': 'Buổi tối',
   'Weekends': 'Cuối tuần',
-  'Listings that mention these times, or flexible hours, move up your list. Nothing is hidden.': 'Tin có nhắc đến các khung giờ này, hoặc giờ linh hoạt, sẽ được xếp cao hơn. Không tin nào bị ẩn.',
   'Job type': 'Loại công việc',
   'Any': 'Tất cả',
   'Full-time': 'Toàn thời gian',
