@@ -77,7 +77,7 @@ export function Footer(ctx) {
       <div><h2 class="footer-h">Listings</h2><p class="footer-note">Each listing links to the website that posted it.</p></div>
       <div><h2 class="footer-h">Your data</h2><p class="footer-note">Your account, profile and saved list are stored in Firebase. Intern Match never asks for your CV.</p></div>
     </div>
-    <div class="footer-base"><span>© Nhóm 6 STKN</span><span>Built for university students in Ho Chi Minh City</span></div>
+    <div class="footer-base"><span>© 2026 Intern Match by Group 6 · Creative Entrepreneurship</span><span>Built for university students in Ho Chi Minh City</span></div>
   </div>`;
 }
 
@@ -313,7 +313,7 @@ export function ProfileForm(d, ctx, mode) {
         ${Seg('jobType', 'Job type', JOB_TYPES, d.jobType || 'any')}</div></section>
       <div class="pf-actions"><button class="btn btn-primary" type="submit" data-fk="pf-save"${ctx.busy ? raw(' disabled aria-busy="true"') : ''}>${mode === 'welcome' ? h`Find my top 10 ${icon('arrow')}` : 'Save profile'}</button>
         ${mode === 'welcome' ? '' : h`<a class="btn btn-outline" href="#/top">Cancel</a>`}</div>
-      <p class="hint">Stored in your account. Nothing is sent to employers.</p>
+      <p class="hint">Stored in your account.</p>
     </form>
     <aside class="pf-aside" aria-labelledby="pf-meter-t"><p class="pf-aside-t" id="pf-meter-t">Your search</p>
       <div class="meter meter-4" aria-hidden="true">${parts.map((f) => h`<span${f[1] ? raw(' class="on"') : ''}></span>`)}</div>
