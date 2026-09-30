@@ -30,7 +30,7 @@ export const VI = {
   'Your data': 'Dữ liệu của bạn',
   'Your account, profile and saved list are stored in Firebase. Intern Match never asks for your CV.': 'Tài khoản, hồ sơ và danh sách đã lưu được lưu trên Firebase. Intern Match không bao giờ yêu cầu CV của bạn.',
   'Internships and no-experience jobs. Ho Chi Minh City only. You apply on the original website.': `Việc thực tập và việc không cần kinh nghiệm. Chỉ tại ${HCMC}. Bạn ứng tuyển trên trang gốc.`,
-  '© by Group 6 · Creative Entrepreneurship': '© bởi Nhóm 6 · Sáng tạo Khởi nghiệp',
+  '© 2026 by Group 6 · Creative Entrepreneurship': '© 2026 bởi Nhóm 6 · Sáng tạo Khởi nghiệp',
   'Built for university students in Ho Chi Minh City': `Dành cho sinh viên đại học tại ${HCMC}`,
   'Dismiss': 'Đóng',
   'Close': 'Đóng',
