@@ -178,3 +178,7 @@ ol.card-grid{list-style:none}
 .trust-list .is-info{color:var(--text-2)}
 .trust-look{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:14px 16px;border:1px solid var(--rule);background:var(--surface)}
 .trust-look p{margin:0;flex:1 1 260px;font-size:14px}
+
+/* Footer credit: site name, then the group on the next line */
+.footer-credit{display:flex;flex-direction:column;gap:4px}
+.footer-name{color:#fff;text-transform:uppercase;letter-spacing:.06em}
