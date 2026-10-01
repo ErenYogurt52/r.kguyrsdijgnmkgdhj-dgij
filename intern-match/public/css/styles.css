@@ -434,7 +434,7 @@ fieldset.field>legend+*{clear:both}
 .similar .h-section{margin-bottom:28px}
 .apply-bar{display:none}
 @media (max-width:1023px){
-  .detail{grid-template-columns:1fr;grid-template-areas:"head" "side" "body"}
+  .detail{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "side" "body"}
   .detail-side{position:static}
   .apply-bar{display:flex;gap:8px;position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px var(--gutter) calc(12px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--rule)}
   .apply-bar .btn-primary{flex:1;min-width:0}

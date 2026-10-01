@@ -193,6 +193,7 @@ test('on the Vietnamese site the coach answers in Vietnamese unless asked for En
   const p = systemPrompt(ctx);
   assert.match(p, /reply in Vietnamese, even when they write in English/);
   assert.match(p, /Reminder: answer in Vietnamese/);
+  assert.match(p, /call the student "bạn" and yourself "mình"/);
   assert.equal(cleanContext({ lang: 'fr' }).lang, 'en', 'anything else means English');
 });
 

@@ -245,7 +245,8 @@ function render(opts = {}) {
   for (const el of [els.header, els.menu, els.main, els.footer]) translateDom(el);
   if (els.skip) els.skip.textContent = t('Skip to content');
   document.body.classList.toggle('has-apply-bar', R.name === 'detail' && Boolean($('.apply-bar')));
-  document.title = `${t(TITLES[R.name] || 'Intern Match')} · Intern Match`;
+  const job = R.name === 'detail' ? S.jobs.get(R.id) : null;
+  document.title = `${job && job.title ? job.title : t(TITLES[R.name] || 'Intern Match')} · Intern Match`;
   if (S.ui.menu) { $('#mobile-menu [data-fk="menu-close"]').focus(); return; }
   if (opts.focus) {
     window.scrollTo(0, 0);

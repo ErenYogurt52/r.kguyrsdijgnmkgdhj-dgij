@@ -108,17 +108,17 @@ function shortfall(n, meta, jt) {
   return `${head} We checked ${seen} ${seen === 1 ? 'listing' : 'listings'}${list ? `: ${list}.` : ' for these keywords.'}`.trim();
 }
 function shortfallVi(n, seen, rm, jt) {
-  const head = n ? `Hiện chỉ có ${n} việc phù hợp.` : '';
-  if (!seen) return `${head} Không có tin nào cho các từ khóa này. Hãy thử từ khóa rộng hơn, ví dụ tên lĩnh vực thay vì chức danh.`.trim();
+  const head = n ? `Hiện chỉ có ${n} tin hợp với bạn.` : '';
+  if (!seen) return `${head} Chưa tìm thấy tin nào với từ khóa này. Bạn thử từ khóa rộng hơn nhé, ví dụ tên lĩnh vực thay vì một chức danh cụ thể.`.trim();
   const parts = [];
   const exp = (rm.experience || 0) + (rm.senior || 0);
   const away = (rm.location || 0) + (rm.abroad || 0);
-  if (jt !== 'any' && rm.jobType) parts.push(`${rm.jobType} tin không ghi là ${jt === 'parttime' ? 'bán thời gian' : 'toàn thời gian'}`);
-  if (exp) parts.push(`${exp} tin yêu cầu kinh nghiệm hoặc là vị trí cấp cao`);
+  if (jt !== 'any' && rm.jobType) parts.push(`${rm.jobType} tin không ghi rõ là ${jt === 'parttime' ? 'bán thời gian' : 'toàn thời gian'}`);
+  if (exp) parts.push(`${exp} tin đòi kinh nghiệm hoặc tuyển vị trí cấp cao`);
   if (rm.scam) parts.push(`${rm.scam} tin đòi đặt cọc hoặc đóng phí`);
-  if (away) parts.push(`${away} tin ở ngoài TP. Hồ Chí Minh`);
+  if (away) parts.push(`${away} tin ở ngoài TP.HCM`);
   const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} và ${parts[parts.length - 1]}` : parts[0];
-  return `${head} Chúng tôi đã xem ${seen} tin${list ? `: ${list}.` : ' cho các từ khóa này.'}`.trim();
+  return `${head} ${list ? `Trong ${seen} tin đã kiểm tra, có ${list}.` : `Đã kiểm tra ${seen} tin với từ khóa này.`}`.trim();
 }
 
 // Full-time / part-time filter shown under the search bar on the Top 10 page.
@@ -196,7 +196,7 @@ export function home(ctx) {
     ${Tiles(ctx)}
   </div></section>
   <section class="section section-sources" aria-labelledby="rules-title"><div class="container">
-    <div class="section-head"><div><p class="eyebrow eyebrow-light">What makes the list</p><h2 id="rules-title" class="h-section">Four rules, every time.</h2></div><p class="section-sub">Listings come from company sites and job boards. You always apply on the original site.</p></div>
+    <div class="section-head"><div><p class="eyebrow eyebrow-light">What makes the list</p><h2 id="rules-title" class="h-section">Five rules, every time.</h2></div><p class="section-sub">Listings come from company sites and job boards. You always apply on the original site.</p></div>
     <ul class="sources rules">${[['01', 'Internship', 'Or a job that asks for no experience'], ['02', 'No experience', 'Listings that ask for years of experience are removed'], ['03', 'Ho Chi Minh City', 'Jobs in other cities are removed'], ['04', 'Your top 10', 'Ordered by fit with your profile'], ['05', 'Original website', 'Apply where the job was posted']].map(([c, n, d]) => h`<li class="source"><span class="source-circle" aria-hidden="true">${c}</span><span class="source-name">${n}</span><span class="source-n">${txt(d)}</span></li>`)}</ul>
   </div></section>`;
 }
@@ -414,7 +414,7 @@ export function detail(ctx, j) {
       <dl class="facts">
         <div><dt>Pay</dt><dd>${j.salary ? txt(j.salary) : 'Not listed'}</dd></div>
         <div><dt>Job type</dt><dd>${jobTypeText(j) ? txt(jobTypeText(j)) : 'Not listed'}</dd></div>
-        <div><dt>Experience</dt><dd>${j.kind === 'internship' ? 'Internship' : 'None needed'}</dd></div>
+        <div><dt>Experience</dt><dd>None needed</dd></div>
         <div><dt>Posted</dt><dd>${j.postedAt ? txt(j.postedAt) : 'Not listed'}</dd></div>
       </dl></header>
     <aside class="detail-side" aria-label="Apply">
