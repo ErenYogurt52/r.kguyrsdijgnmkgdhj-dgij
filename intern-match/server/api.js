@@ -2,10 +2,10 @@
 // runs in the local Node server (server/index.js) and as a Netlify Function (netlify/functions/api.mjs).
 //   GET  /api/config   public Firebase web config + feature flags
 //   GET  /api/health
-//   POST /api/search   { keywords[], profile, fresh? } → top internships from Google Jobs (SearchApi.io)
+//   POST /api/search   { keywords[], profile, fresh? } → top internships from Google Jobs (SearchApi.io, SerpApi)
 //   POST /api/coach    { messages[], profile, jobs[] } → streamed career-coach reply (NDJSON)
 import { createVerifier, AuthError } from './auth.js';
-import { createSearchApi, SearchApiError } from './searchapi.js';
+import { createSearchApi, createSearchChain, SearchApiError } from './searchapi.js';
 import { createCache, createDailyLimit } from './cache.js';
 import { runSearch, cleanKeywords } from './jobs.js';
 import { createCoachChain, CoachError, cleanChat, cleanContext, systemPrompt } from './coach.js';
@@ -36,7 +36,9 @@ async function readJson(request, max) {
 
 export function createApi(cfg, deps = {}) {
   const cache = deps.cache || createCache({ dir: join(cfg.search.cacheDir, 'searchapi'), ttlMs: cfg.search.cacheHours * 3600e3 });
-  const serp = deps.serp || createSearchApi({ ...cfg.searchapi, cache });
+  // Every search service with a key, in order: the next one takes over when one is out of credits or busy.
+  const serp = deps.serp || createSearchChain(cfg.search.providers.map((p) => createSearchApi({ ...p, cache })));
+  const searchReady = Boolean(deps.serp) || cfg.search.providers.length > 0;
   const limiter = deps.limiter || createDailyLimit({ limit: cfg.search.perUserPerDay });
   const coachAi = deps.coach || createCoachChain(cfg.coach.chain || []);
   const coachLimiter = deps.coachLimiter || createDailyLimit({ limit: cfg.coach.perUserPerDay });
@@ -61,16 +63,20 @@ export function createApi(cfg, deps = {}) {
     try { body = await readJson(request, 32 * 1024); } catch (e) { return fail(e.status || 400, 'bad_request', e.message); }
     const keywords = cleanKeywords(body.keywords, cfg.search.maxKeywords);
     if (!keywords.length) return fail(400, 'no_keywords', 'Add at least one keyword to your profile first.');
-    if (!cfg.searchapi.apiKey) return fail(503, 'search_not_configured', 'Search is not set up yet. Please try again later.');
+    if (!searchReady) return fail(503, 'search_not_configured', 'Search is not set up yet. Please try again later.');
     if (limiter.remaining(user.uid) <= 0) return fail(429, 'daily_limit', `You’ve used today’s ${cfg.search.perUserPerDay} searches. Try again tomorrow.`);
 
+    // Why a query failed names the search service, so that text stays in the server log.
+    const quiet = (o) => { if (o.meta.warning) o.meta.warning = 'Some searches did not finish.'; return o; };
     const work = async (onProgress) => {
       try {
-        const out = await runSearch({ keywords, profile: pickProfile(body.profile), serp, limit: cfg.search.results, maxCalls: cfg.search.maxCalls, timeBudgetMs: cfg.search.timeBudgetMs, fresh: body.fresh === true, onProgress });
+        const out = await runSearch({ keywords, profile: pickProfile(body.profile), serp, limit: cfg.search.results, maxCalls: cfg.search.maxCalls, timeBudgetMs: cfg.search.timeBudgetMs, fresh: body.fresh === true, onProgress: onProgress && ((snap) => onProgress(quiet(snap))) });
+        if (out.meta.warning) console.warn('[search] some queries failed:', out.meta.warning);
+        quiet(out);
         if (out.meta.stats.calls > 0) limiter.take(user.uid);
         out.meta.searchedAt = new Date().toISOString();
         out.meta.remainingToday = limiter.remaining(user.uid);
-        console.log(`[search] uid=${user.uid.slice(0, 6)}… keywords=${JSON.stringify(keywords)} searchapi=${out.meta.stats.calls} cached=${out.meta.stats.cachedCalls} seen=${out.meta.stats.seen} kept=${out.meta.stats.kept} shown=${out.jobs.length}`);
+        console.log(`[search] uid=${user.uid.slice(0, 6)}… keywords=${JSON.stringify(keywords)} calls=${out.meta.stats.calls} cached=${out.meta.stats.cachedCalls} seen=${out.meta.stats.seen} kept=${out.meta.stats.kept} shown=${out.jobs.length}`);
         return { status: 200, body: out };
       } catch (e) {
         console.error('[search] failed:', e.message);
@@ -146,10 +152,10 @@ export function createApi(cfg, deps = {}) {
   return async function handle(request) {
     const { pathname } = new URL(request.url);
     try {
-      if (pathname === '/api/health') return json(200, { ok: true, searchReady: Boolean(cfg.searchapi.apiKey), firebaseReady: cfg.firebaseReady, coachReady: Boolean(cfg.coach.apiKey) });
+      if (pathname === '/api/health') return json(200, { ok: true, searchReady, firebaseReady: cfg.firebaseReady, coachReady: Boolean(cfg.coach.apiKey) });
       if (pathname === '/api/config' && (request.method === 'GET' || request.method === 'HEAD')) {
         return json(200, {
-          firebase: cfg.firebaseReady ? cfg.firebase : null, searchReady: Boolean(cfg.searchapi.apiKey), results: cfg.search.results, maxKeywords: cfg.search.maxKeywords, perDay: cfg.search.perUserPerDay,
+          firebase: cfg.firebaseReady ? cfg.firebase : null, searchReady, results: cfg.search.results, maxKeywords: cfg.search.maxKeywords, perDay: cfg.search.perUserPerDay,
           coachReady: Boolean(cfg.coach.apiKey),
         });
       }

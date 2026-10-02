@@ -97,9 +97,10 @@ if (isMain) {
   server.listen(cfg.port, cfg.host, () => {
     console.log(`\n  Intern Match is running at http://${cfg.host === '0.0.0.0' ? 'localhost' : cfg.host}:${cfg.port}\n`);
     if (!cfg.firebaseReady) console.warn('  ! Firebase is not configured: fill FIREBASE_* in .env (see README).');
-    if (!cfg.searchapi.apiKey) console.warn('  ! SEARCHAPI_KEY is missing: search will not work until you add it.');
+    if (!cfg.search.providers.length) console.warn('  ! SEARCHAPI_KEY (or SERPAPI_KEY) is missing: search will not work until you add one.');
+    else console.log(`  Job search: ${cfg.search.providers.map((p) => (p.provider === 'serpapi' ? 'SerpApi' : 'SearchApi.io')).join(' → ')}`);
     if (!cfg.coach.apiKey) console.warn('  ! Career coach is off: set GEMINI_API_KEY in .env.');
     else console.log(`  Career coach: ${cfg.coach.label}`);
-    if (!cfg.requireAuth) console.warn('  ! REQUIRE_AUTH=false: anyone who can reach this server can spend your SearchApi credits.');
+    if (!cfg.requireAuth) console.warn('  ! REQUIRE_AUTH=false: anyone who can reach this server can spend your search credits.');
   });
 }

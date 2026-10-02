@@ -1,5 +1,5 @@
 // Small TTL cache: memory first, then JSON files on disk so a restart doesn't spend
-// SearchApi credits again. Keys are hashed; values must be JSON-serialisable.
+// search credits again. Keys are hashed; values must be JSON-serialisable.
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
 import { join } from 'node:path';

@@ -48,6 +48,25 @@ function coachSettings(env) {
   };
 }
 
+// Job search services. Both read the same Google Jobs listings. Every service with a key is used,
+// in this order, and a search moves on to the next one when a service is out of credits or busy:
+//   SearchApi.io (SEARCHAPI_KEY) → SerpApi (SERPAPI_KEY)
+// SEARCH_PROVIDERS=serpapi,searchapi (comma-separated) changes the order or picks a subset.
+function searchProviders(env) {
+  const shared = {
+    location: env.SEARCH_LOCATION || 'Ho Chi Minh City,Ho Chi Minh City,Vietnam', // the same name works at both services
+    hl: env.SEARCH_HL || 'en',
+    gl: env.SEARCH_GL || 'vn',
+    timeoutMs: int(env.SEARCH_TIMEOUT_MS, 30000, 2000, 120000),
+  };
+  const known = {
+    searchapi: { apiKey: env.SEARCHAPI_KEY || '', baseUrl: env.SEARCHAPI_BASE_URL || 'https://www.searchapi.io/api/v1/search' },
+    serpapi: { apiKey: env.SERPAPI_KEY || '', baseUrl: env.SERPAPI_BASE_URL || 'https://serpapi.com/search.json' },
+  };
+  const order = (env.SEARCH_PROVIDERS || 'searchapi,serpapi').toLowerCase().split(/[\s,]+/).filter(Boolean);
+  return [...new Set(order)].filter((name) => known[name] && known[name].apiKey).map((name) => ({ provider: name, ...known[name], ...shared }));
+}
+
 export function settings(env = process.env) {
   const firebase = {
     apiKey: env.FIREBASE_API_KEY || '',
@@ -64,16 +83,9 @@ export function settings(env = process.env) {
     firebaseReady: Boolean(firebase.apiKey && firebase.projectId && firebase.appId),
     requireAuth: bool(env.REQUIRE_AUTH, true),
     streamSearch: bool(env.STREAM_SEARCH, false),
-    searchapi: {
-      apiKey: env.SEARCHAPI_KEY || '',
-      baseUrl: env.SEARCHAPI_BASE_URL || 'https://www.searchapi.io/api/v1/search',
-      location: env.SEARCH_LOCATION || 'Ho Chi Minh City,Ho Chi Minh City,Vietnam',
-      hl: env.SEARCH_HL || 'en',
-      gl: env.SEARCH_GL || 'vn',
-      timeoutMs: int(env.SEARCH_TIMEOUT_MS, 30000, 2000, 120000),
-    },
     coach: coachSettings(env),
     search: {
+      providers: searchProviders(env),
       results: int(env.RESULTS_LIMIT, 10, 1, 30),
       maxKeywords: int(env.MAX_KEYWORDS, 3, 1, 5),
       maxCalls: int(env.MAX_API_CALLS_PER_SEARCH, 4, 1, 12),
