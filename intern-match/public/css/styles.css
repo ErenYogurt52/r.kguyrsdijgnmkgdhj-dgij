@@ -205,13 +205,15 @@ h1[tabindex="-1"]:focus,h2[tabindex="-1"]:focus,p[tabindex="-1"]:focus,#main:foc
 @keyframes shimmer{to{transform:translateX(100%)}}
 
 /* ===== Category tiles ===== */
+/* The name starts at a fixed distance under the icon, so the names in a row line up
+   whatever the length of the keywords below them. The arrow stays in the bottom corner. */
 .tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:12px}
 .tile{position:relative;display:flex;flex-direction:column;gap:4px;min-height:176px;padding:20px;background:var(--tile);color:#fff;text-decoration:none}
 .tile-light{color:#0E0B1F}
-.tile-ic{width:48px;height:48px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.18);margin-bottom:auto}
+.tile-ic{width:48px;height:48px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.18);margin-bottom:16px}
 .tile-light .tile-ic{background:rgba(14,11,31,.12)}
 .tile-ic .icon{width:24px;height:24px}
-.tile-name{font-size:20px;font-weight:700;letter-spacing:-.015em;line-height:1.15;padding-right:28px}
+.tile-name{font-size:20px;font-weight:700;letter-spacing:-.015em;line-height:1.15;text-wrap:balance}
 .tile-count{font-size:14px}
 .tile-arrow{position:absolute;right:18px;bottom:20px;transition:transform .15s}
 .tile:hover .tile-arrow{transform:translateX(4px)}
